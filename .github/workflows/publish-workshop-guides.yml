@@ -3,6 +3,7 @@ name: Publish workshop guides
 on:
   push:
     paths:
+      - '.github/workflows/publish-workshop-guides.yml'
       - '.upload-staging/READY'
 
 permissions:
