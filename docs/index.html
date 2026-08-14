@@ -1,96 +1,360 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ko">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="RHEL 10 Hands-on Labs">
-  <title>RHEL Hands-on Labs</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&family=Red+Hat+Display:wght@500;600;700&display=swap" rel="stylesheet">
+  <title>RHEL 10 Hands-on Workshop Hub</title>
   <style>
     :root {
-      color-scheme: light dark;
-      --bg: #f7f7f7;
-      --surface: #ffffff;
-      --text: #151515;
-      --muted: #6a6e73;
-      --border: #d2d2d2;
-      --accent: #ee0000;
-      --accent-hover: #c9190b;
-      --shadow: 0 10px 30px rgba(0,0,0,.08);
+      --bg:#0b0c0f;
+      --panel:#15171c;
+      --panel2:#1d2026;
+      --text:#f5f7fa;
+      --muted:#b7bdc8;
+      --line:#303743;
+      --red:#ee0000;
+      --red-hover:#ff1a1a;
+      --blue:#2563eb;
+      --blue-hover:#3b82f6;
+      --green:#31c48d;
     }
-    @media (prefers-color-scheme: dark) {
-      :root {
-        --bg: #151515;
-        --surface: #212121;
-        --text: #f0f0f0;
-        --muted: #b8bbbe;
-        --border: #4f5255;
-        --shadow: 0 10px 30px rgba(0,0,0,.28);
-      }
-    }
-    * { box-sizing: border-box; }
+    * { box-sizing:border-box; }
     body {
-      margin: 0;
-      background: var(--bg);
-      color: var(--text);
-      font-family: "Noto Sans KR", system-ui, sans-serif;
-      line-height: 1.6;
+      margin:0;
+      min-height:100vh;
+      background:
+        radial-gradient(circle at 12% 8%, rgba(238,0,0,.17), transparent 28%),
+        radial-gradient(circle at 88% 12%, rgba(37,99,235,.14), transparent 28%),
+        var(--bg);
+      color:var(--text);
+      font-family:"Noto Sans KR","Noto Sans CJK KR",system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
     }
-    .wrap { width: min(1120px, calc(100% - 40px)); margin: 0 auto; }
-    header { padding: 28px 0; border-bottom: 1px solid var(--border); background: var(--surface); }
-    .brand { display: flex; align-items: center; gap: 12px; font-family: "Red Hat Display", sans-serif; font-weight: 700; font-size: 1.15rem; }
-    .dot { width: 16px; height: 16px; border-radius: 50%; background: var(--accent); box-shadow: 22px 0 0 #8a8d90; margin-right: 22px; }
-    .hero { padding: 80px 0 52px; }
-    .eyebrow { color: var(--accent); font-family: "Red Hat Display", sans-serif; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
-    h1 { font-family: "Red Hat Display", "Noto Sans KR", sans-serif; font-size: clamp(2.4rem, 6vw, 4.6rem); line-height: 1.05; margin: 12px 0 20px; }
-    .lead { max-width: 760px; color: var(--muted); font-size: 1.08rem; }
-    .grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 22px; padding: 22px 0 84px; }
-    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 18px; padding: 28px; box-shadow: var(--shadow); display: flex; flex-direction: column; min-height: 310px; }
-    .tag { display: inline-flex; width: fit-content; padding: 5px 9px; border: 1px solid var(--border); border-radius: 999px; color: var(--muted); font-size: .82rem; margin-bottom: 22px; }
-    h2 { font-family: "Red Hat Display", "Noto Sans KR", sans-serif; margin: 0 0 12px; font-size: 1.65rem; }
-    .card p { color: var(--muted); margin: 0 0 18px; }
-    .topics { font-size: .92rem; color: var(--muted); margin-bottom: 28px; }
-    .button { margin-top: auto; display: inline-flex; justify-content: center; align-items: center; text-decoration: none; background: var(--accent); color: white; padding: 12px 18px; border-radius: 8px; font-weight: 700; transition: .15s ease; }
-    .button:hover { background: var(--accent-hover); transform: translateY(-1px); }
-    footer { border-top: 1px solid var(--border); color: var(--muted); padding: 26px 0 40px; font-size: .9rem; }
-    @media (max-width: 760px) { .grid { grid-template-columns: 1fr; } .hero { padding-top: 56px; } }
+    .page-shell {
+      width:min(1320px, calc(100% - 40px));
+      margin:0 auto;
+      padding:42px 0 70px;
+      display:grid;
+      grid-template-columns:230px minmax(0,1fr);
+      gap:28px;
+      align-items:start;
+    }
+    .sidebar {
+      position:sticky;
+      top:24px;
+      border:1px solid var(--line);
+      border-radius:16px;
+      background:rgba(21,23,28,.96);
+      overflow:hidden;
+      box-shadow:0 16px 42px rgba(0,0,0,.18);
+    }
+    .sidebar-head {
+      padding:18px 17px 14px;
+      border-bottom:1px solid var(--line);
+    }
+    .sidebar-title {
+      margin:0 0 5px;
+      font-size:15px;
+      font-weight:900;
+      color:var(--text);
+    }
+    .sidebar-sub {
+      margin:0;
+      color:var(--muted);
+      font-size:11.5px;
+      line-height:1.5;
+    }
+    .sidebar-links {
+      padding:10px;
+      display:grid;
+      gap:7px;
+    }
+    .side-link {
+      display:block;
+      padding:11px 12px;
+      border:1px solid var(--line);
+      border-radius:10px;
+      background:var(--panel2);
+      color:var(--text);
+      text-decoration:none;
+      font-weight:800;
+      font-size:13px;
+      line-height:1.4;
+      transition:.15s ease;
+    }
+    .side-link:hover {
+      transform:translateY(-1px);
+      filter:brightness(1.08);
+    }
+    .side-link small {
+      display:block;
+      margin-top:3px;
+      color:var(--muted);
+      font-weight:500;
+      font-size:10.5px;
+    }
+    .side-link.redhat { border-left:4px solid var(--red); }
+    .side-link.quay { border-left:4px solid var(--blue); }
+    .content { min-width:0; }
+    .eyebrow {
+      color:#ff6b62;
+      font-size:13px;
+      letter-spacing:.11em;
+      font-weight:900;
+    }
+    h1 {
+      margin:10px 0 14px;
+      font-size:clamp(38px,5vw,60px);
+      line-height:1.08;
+      letter-spacing:-.045em;
+    }
+    .lead {
+      margin:0 0 34px;
+      max-width:850px;
+      color:var(--muted);
+      font-size:17px;
+      line-height:1.7;
+    }
+    .toolbar {
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      margin:0 0 24px;
+      padding:12px 14px;
+      border:1px solid var(--line);
+      background:rgba(255,255,255,.025);
+      border-radius:14px;
+      color:var(--muted);
+      font-size:13px;
+    }
+    .toolbar strong { color:var(--text); }
+    .grid {
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:20px;
+    }
+    .card {
+      position:relative;
+      overflow:hidden;
+      border:1px solid var(--line);
+      border-radius:18px;
+      background:
+        linear-gradient(180deg,rgba(255,255,255,.025),rgba(255,255,255,.005)),
+        var(--panel);
+      padding:28px;
+      box-shadow:0 18px 50px rgba(0,0,0,.20);
+    }
+    .card::before {
+      content:"";
+      position:absolute;
+      left:0;right:0;top:0;
+      height:4px;
+      background:var(--red);
+    }
+    .card.pqc::before { background:var(--blue); }
+    .lab-no {
+      color:var(--muted);
+      font-weight:900;
+      font-size:12px;
+      letter-spacing:.08em;
+    }
+    h2 {
+      margin:12px 0 10px;
+      font-size:27px;
+      letter-spacing:-.025em;
+    }
+    .desc {
+      min-height:82px;
+      color:var(--muted);
+      line-height:1.65;
+      font-size:14.5px;
+    }
+    .flow {
+      margin:18px 0;
+      padding:14px 15px;
+      border:1px solid var(--line);
+      border-radius:12px;
+      background:#101217;
+      color:#d7dce4;
+      line-height:1.65;
+      font-size:13px;
+    }
+    .actions {
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:10px;
+    }
+    .intro-action {
+      margin-bottom:10px;
+    }
+    .intro-action .btn {
+      width:100%;
+      min-height:48px;
+      color:#dff7ec;
+      background:rgba(49,196,141,.10);
+      border:1px solid rgba(49,196,141,.48);
+    }
+    .intro-action .btn:hover {
+      background:rgba(49,196,141,.16);
+    }
+    a.btn {
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      min-height:50px;
+      padding:11px 13px;
+      border-radius:10px;
+      text-decoration:none;
+      text-align:center;
+      font-size:14px;
+      font-weight:900;
+      transition:transform .15s ease, filter .15s ease, background .15s ease;
+    }
+    a.btn:hover {
+      transform:translateY(-1px);
+      filter:brightness(1.08);
+    }
+    .zero .btn.primary {
+      color:white;
+      background:var(--red);
+      border:1px solid var(--red);
+    }
+    .pqc .btn.primary {
+      color:white;
+      background:var(--blue);
+      border:1px solid var(--blue);
+    }
+    .btn.secondary {
+      color:var(--text);
+      background:var(--panel2);
+      border:1px solid var(--line);
+    }
+    .guide-note {
+      margin-top:12px;
+      color:#8c96a5;
+      font-size:12px;
+      line-height:1.55;
+    }
+    .footer {
+      margin-top:28px;
+      color:#7c8593;
+      font-size:12px;
+      text-align:center;
+    }
+    @media (max-width:900px) {
+      .page-shell {
+        width:min(100% - 28px, 1160px);
+        padding-top:26px;
+        grid-template-columns:1fr;
+      }
+      .sidebar {
+        position:relative;
+        top:auto;
+      }
+      .sidebar-links {
+        grid-template-columns:1fr 1fr;
+      }
+      .grid { grid-template-columns:1fr; }
+      .actions { grid-template-columns:1fr; }
+      .desc { min-height:0; }
+    }
+    @media (max-width:560px) {
+      .sidebar-links { grid-template-columns:1fr; }
+    }
   </style>
 </head>
 <body>
-  <header>
-    <div class="wrap brand"><span class="dot" aria-hidden="true"></span>RHEL Hands-on Labs</div>
-  </header>
+  <div class="page-shell">
+    <aside class="sidebar" aria-label="실습 전 준비 링크">
+      <div class="sidebar-head">
+        <div class="sidebar-title">실습 전 준비</div>
+        <p class="sidebar-sub">계정 생성과 이미지 저장소 접속에 필요한 링크입니다.</p>
+      </div>
+      <div class="sidebar-links">
+        <a class="side-link redhat"
+           href="https://www.redhat.com/wapps/ugc/register.html"
+           target="_blank" rel="noopener noreferrer">
+          Red Hat 계정 등록 ↗
+          <small>Red Hat 계정이 없다면 먼저 생성</small>
+        </a>
+        <a class="side-link quay"
+           href="https://quay.io"
+           target="_blank" rel="noopener noreferrer">
+          Quay.io 열기 ↗
+          <small>Zero-CVE 실습용 이미지 Repository 준비</small>
+        </a>
+      </div>
+    </aside>
 
-  <main>
-    <section class="hero wrap">
-      <div class="eyebrow">Hands-on Workshop</div>
-      <h1>RHEL 10을<br>직접 경험해보세요.</h1>
-      <p class="lead">RHEL 10의 운영·보안 기능을 단계별로 따라 하며 이해할 수 있도록 구성한 실습 콘텐츠입니다. 각 Lab에서 명령어를 복사해 실행하고 결과를 직접 확인할 수 있습니다.</p>
-    </section>
+    <main class="content">
+    <div class="eyebrow">RED HAT ENTERPRISE LINUX 10</div>
+    <h1>Hands-on Workshop Hub</h1>
+    <p class="lead">
+      RHEL 10 실습 환경과 가이드를 한 페이지에서 바로 열 수 있도록 구성했습니다.
+      이 페이지를 실습 시작점으로 두고 각 버튼을 새 탭에서 열어 사용하면 됩니다.
+    </p>
 
-    <section class="grid wrap">
-      <article class="card">
-        <span class="tag">Lab 01 · Operations & Security</span>
-        <h2>RHEL 10 Image Mode & Zero-CVE</h2>
-        <p>이미지 기반 운영 모델에서 보안 업데이트를 적용하고 다운타임을 최소화하는 흐름을 실습합니다.</p>
-        <div class="topics">Image Mode · bootc · Hardened Image · CVE Remediation · kpatch · systemd soft-reboot</div>
-        <a class="button" href="./image-mode/">Start Lab</a>
+    <div class="toolbar">
+      <span>ⓘ</span>
+      <span><strong>사용 방법:</strong> 실습 환경 또는 기본 실습을 먼저 연 뒤, 필요한 가이드를 새 탭으로 열어 진행하세요.</span>
+    </div>
+
+    <section class="grid">
+      <article class="card zero">
+        <div class="lab-no">LAB 01 · IMAGE MODE / ZERO-CVE</div>
+        <h2>RHEL 10 최신 OS 패치 방안</h2>
+        <p class="desc">
+          RHEL 10.0에서 RHEL 10.2 Image Mode로 전환하고,
+          Hardened Image · kpatch · Userspace Update · systemd soft reboot 흐름을 실습합니다.
+        </p>
+        <div class="flow">
+          RHEL 10.0 → Hardened Image → Image Mode → kpatch → Userspace Update → soft reboot
+        </div>
+        <div class="intro-action">
+          <a class="btn" href="https://zero.rhdp.net/lab/zt-rhelbu.zt-image-mode-basics.prod" target="_blank" rel="noopener noreferrer">
+            Image Mode 기본 실습 · 쉬운 입문 ↗
+          </a>
+        </div>
+        <div class="actions">
+          <a class="btn primary" href="https://catalog.demo.redhat.com/workshop/83n9f4" target="_blank" rel="noopener noreferrer">
+            실습 환경 열기 ↗
+          </a>
+          <a class="btn secondary" href="guides/zero-cve.html" target="_blank" rel="noopener noreferrer">
+            Zero-CVE 가이드
+          </a>
+        </div>
+        <div class="guide-note">
+          Image Mode가 처음이라면 위 기본 실습으로 개념과 기본 동작을 먼저 익힌 뒤 Zero-CVE 실습을 진행하면 이해하기 쉽습니다.
+        </div>
       </article>
 
-      <article class="card">
-        <span class="tag">Lab 02 · Cryptography</span>
-        <h2>RHEL 10 Post-Quantum Cryptography</h2>
-        <p>시스템 전역 암호화 정책과 PQC 지원을 연결해 보고, RHEL 10에서의 준비 사항을 실습합니다.</p>
-        <div class="topics">Crypto Policies · FUTURE · ML-KEM · ML-DSA · PQC-ready Environment</div>
-        <a class="button" href="./pqc/">Start Lab</a>
+      <article class="card pqc">
+        <div class="lab-no">LAB 02 · CRYPTO POLICY / PQC</div>
+        <h2>System-wide Crypto Policy + PQC</h2>
+        <p class="desc">
+          기본 Crypto Policy 실습 후, 추가 가이드에서 Hybrid ML-KEM을 확인하고
+          시간이 남으면 ML-DSA 전자서명·검증까지 진행합니다.
+        </p>
+        <div class="flow">
+          기본 Crypto Policy → FUTURE / Apache → X25519MLKEM768 → ML-DSA (선택)
+        </div>
+        <div class="actions">
+          <a class="btn primary" href="https://developers.redhat.com/content-gateway/link/3890420?_gl=1*bc5h95*_gcl_au*MTk5ODk5NzY0MS4xNzg0NTk0MjUz" target="_blank" rel="noopener noreferrer">
+            PQC 기본 실습 열기 ↗
+          </a>
+          <a class="btn secondary" href="guides/pqc-additional.html" target="_blank" rel="noopener noreferrer">
+            PQC 추가 실습 가이드
+          </a>
+        </div>
+        <div class="guide-note">
+          추가 실습은 기본 Crypto Policy 실습을 완료한 뒤 이어서 진행하는 용도로 배치했습니다.
+        </div>
       </article>
     </section>
-  </main>
 
-  <footer>
-    <div class="wrap">Personal technical lab project · Not official Red Hat product documentation</div>
-  </footer>
+    <div class="footer">
+      RHEL 10 Hands-on Workshop · Workshop Navigation Page
+    </div>
+    </main>
+  </div>
 </body>
 </html>
