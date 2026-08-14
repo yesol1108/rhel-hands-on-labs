@@ -1,20 +1,53 @@
-# RHEL Hands-on Labs
+# RHEL 10 Hands-on Workshop
 
-RHEL 10 기반 기술을 직접 실습할 수 있도록 구성한 개인 Hands-on Lab 콘텐츠 저장소입니다.
+RHEL 10 실습 환경과 가이드를 한 곳에서 열 수 있도록 구성한 Hands-on Workshop 저장소입니다.
+
+## Workshop Hub
+
+GitHub Pages의 메인 진입점은 **Hands-on Workshop Hub**입니다.
+
+- Workshop Hub: `https://yesol1108.github.io/rhel-hands-on-labs/`
+- Source: `docs/index.html`
+
+Hub에서 실습 환경, 기본 실습, 추가 가이드를 바로 열 수 있습니다.
 
 ## Labs
 
-- **RHEL 10 Image Mode & Zero-CVE**  
-  Image Mode (`bootc`), hardened image, CVE remediation, kpatch, systemd soft-reboot
+### Lab 01 · Image Mode / Zero-CVE
 
-- **RHEL 10 Post-Quantum Cryptography (PQC)**  
-  System-wide crypto policies, ML-KEM, ML-DSA, PQC-ready environment
+**RHEL 10 최신 OS 패치 방안**
+
+RHEL 10.0에서 RHEL 10.2 Image Mode로 전환하고 Hardened Image, kpatch, Userspace Update, systemd soft reboot 흐름을 실습합니다.
+
+- Image Mode 기본 실습
+- OpenTLC 실습 환경
+- Zero-CVE 실습 가이드
+
+### Lab 02 · Crypto Policy / PQC
+
+**System-wide Crypto Policy + PQC**
+
+기본 Crypto Policy 실습 후 Hybrid ML-KEM을 확인하고, 선택 단계로 ML-DSA 전자서명과 검증까지 진행합니다.
+
+- System-wide Crypto Policy 기본 실습
+- PQC 추가 실습 가이드
+
+## Repository Structure
+
+```text
+rhel-hands-on-labs/
+├── README.md
+└── docs/
+    ├── index.html              # Workshop Hub
+    ├── guides/
+    │   ├── zero-cve.html
+    │   └── pqc-additional.html
+    └── .nojekyll
+```
 
 ## GitHub Pages
 
-이 저장소의 웹 실습 가이드는 `docs/` 디렉터리에서 관리합니다.
-
-Pages 설정 시 다음 값을 사용하세요.
+Pages 설정은 아래 값을 사용합니다.
 
 - Source: `Deploy from a branch`
 - Branch: `main`
