@@ -36,3 +36,5 @@ jobs:
           git add -A
           git commit -m '[skip ci] Publish workshop guides'
           git push
+
+# publish-attempt-2
