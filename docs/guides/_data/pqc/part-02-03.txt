@@ -1,0 +1,62 @@
+/label></div>
+<div class="toolbar"><button id="resetChecks" type="button">체크 초기화</button></div>
+</section><section id="refs"><div class="section-kicker">REFERENCES</div><h2>참고 문서</h2><p class="lead">PQC 추가 실습의 명령과 개념 설명은 아래 공식 문서를 기준으로 구성했습니다.</p><ul><li><a href="https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/10/html/securing_networks/creating-and-managing-tls-keys-and-certificates" rel="noopener" target="_blank">Red Hat Enterprise Linux 10 — Post-quantum cryptography algorithms in OpenSSL</a></li><li><a href="https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/10/html/10.2_release_notes/removed-features" rel="noopener" target="_blank">Red Hat Enterprise Linux 10.2 Release Notes — Non-post-quantum KEX removed from FUTURE</a></li><li><a href="https://csrc.nist.gov/pubs/fips/203/final" rel="noopener" target="_blank">NIST FIPS 203 — ML-KEM</a></li><li><a href="https://csrc.nist.gov/pubs/fips/204/final" rel="noopener" target="_blank">NIST FIPS 204 — ML-DSA</a></li></ul></section>
+</main>
+</div>
+<script>
+function escapeHtml(s){return s.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));}
+function highlight(code,lang){
+  let lines=code.textContent.split('\n');
+  code.innerHTML=lines.map(line=>{
+    let e=escapeHtml(line);
+    if(/^\s*#/.test(line)) return '<span class="com">'+e+'</span>';
+    if(lang==='containerfile') e=e.replace(/^(FROM|ARG|RUN|COPY|LABEL|CMD|ENV|WORKDIR)\b/,'<span class="kw">$1</span>');
+    else e=e.replace(/^(\s*)(sudo|export|printf|cat|echo|read|unset|rpm|uname|systemctl|sysctl|mkdir|grep)\b/,'$1<span class="cmd">$2</span>');
+    e=e.replace(/(\$\{[^}]+\}|\$[A-Z_][A-Z0-9_]*)/g,'<span class="var">$1</span>');
+    return e;
+  }).join('\n');
+}
+async function copyText(text){
+  // HTTPS/localhost 등 Clipboard API를 사용할 수 있는 환경
+  if (navigator.clipboard && window.isSecureContext) {
+    await navigator.clipboard.writeText(text);
+    return;
+  }
+
+  // file:// 또는 Clipboard API가 제한된 환경용 fallback
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.setAttribute('readonly', '');
+  ta.style.position = 'fixed';
+  ta.style.left = '-9999px';
+  ta.style.top = '0';
+  document.body.appendChild(ta);
+  ta.focus();
+  ta.select();
+
+  const ok = document.execCommand('copy');
+  document.body.removeChild(ta);
+
+  if (!ok) throw new Error('copy command failed');
+}
+
+document.querySelectorAll('.code-card').forEach(card=>{
+  // 툴팁/명령어 설명 안에도 <code>가 있으므로,
+  // 복사·하이라이트 대상은 반드시 실제 명령어 영역(<pre><code>)으로 한정합니다.
+  const code = card.querySelector('pre > code');
+  if (!code) return;
+
+  highlight(code, card.dataset.lang);
+
+  // 화면 예시처럼 복사 버튼이 없는 code-card도 있으므로 안전하게 건너뜁니다.
+  const button = card.querySelector('.copy');
+  if (!button) return;
+
+  button.addEventListener('click', async ()=>{
+    const original = button.textContent;
+    try {
+      await copyText(code.textContent);
+      button.textContent = '복사됨';
+    } catch (e) {
+      button.textContent = '복사 실패';
+      console.error('Clipboard copy failed:
