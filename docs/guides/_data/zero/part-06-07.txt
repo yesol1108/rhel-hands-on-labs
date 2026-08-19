@@ -1,0 +1,225 @@
+rce Image에 미리 포함되어 있습니다. 따라서 Step 1~6에서는 개인 Red Hat 계정이나 RHSM 등록 없이 kpatch와 Userspace Update를 진행합니다. RHSM 등록은 Step 7 Optional 실습에서만 수행합니다.</p></div>
+
+<h3>4-1. kpatch 적용 전 사전 검증</h3>
+<p>실제 patch 적용 전에 실행 중인 kernel, kpatch 도구, transient DNF 지원 여부와 Workshop Repository를 확인합니다. 이 단계에서 RHSM 미등록 메시지가 표시되어도 기본 실습에는 영향을 주지 않습니다.</p>
+<div class="code-card" data-lang="shell">
+<div class="code-head">
+<span>Shell · kpatch 사전 검증</span>
+<div class="code-actions"><span class="quick-tip-wrap"><button aria-label="핵심 명령 빠른 설명" class="quick-tip" type="button">ⓘ</button><span class="quick-tip-pop" role="tooltip"><span class="tip-item"><b><code>dnf kpatch status</code></b>kpatch-dnf가 관리하는 live patch 설정과 현재 사용 가능한 patch를 확인합니다.</span></span></span><button aria-controls="explain-17" aria-expanded="false" class="explain-toggle" type="button">명령어 설명</button><button class="copy" type="button">복사</button></div></div>
+<pre><code>printf '=== 실행 중인 커널 ===\n'
+uname -r
+
+printf '\n=== 설치된 커널 패키지 ===\n'
+rpm -q kernel-core
+
+printf '\n=== kpatch 도구 ===\n'
+rpm -q kpatch kpatch-dnf
+
+printf '\n=== 임시 DNF 지원 여부 ===\n'
+dnf --help | grep -i transient
+
+printf '\n=== RHSM 등록 정보 (미등록이어도 정상) ===\n'
+sudo subscription-manager identity || true
+
+printf '\n=== 활성화된 저장소 ===\n'
+sudo dnf repolist
+
+printf '\n=== kpatch 상태 ===\n'
+sudo dnf kpatch status</code></pre>
+<div class="command-explain" id="explain-17"><div class="explain-title">필요할 때만 펼쳐보는 명령어 설명</div><dl>
+<dt><code>uname -r</code></dt><dd>현재 실제 실행 중인 kernel이 kpatch 실습 대상 kernel인지 확인합니다.</dd>
+<dt><code>rpm -q kernel-core</code></dt><dd>설치된 kernel-core 패키지가 running kernel과 일치하는지 확인합니다.</dd>
+<dt><code>rpm -q kpatch kpatch-dnf</code></dt><dd>kpatch 실행 도구와 DNF 플러그인이 설치되어 있는지 확인합니다.</dd>
+<dt><code>dnf --help | grep -i transient</code></dt><dd>Image Mode의 영구 OS image를 변경하지 않고 현재 boot에서만 DNF transaction을 수행할 수 있는지 확인합니다.</dd>
+<dt><code>subscription-manager identity</code></dt><dd>현재 RHSM 등록 상태를 참고용으로 확인합니다. Step 1~6에서는 미등록이어도 정상입니다.</dd>
+<dt><code>dnf repolist</code></dt><dd>Source Image에 사전 구성된 <code>workshop-rhel10</code> Repository가 활성화되어 있는지 확인합니다.</dd>
+<dt><code>dnf kpatch status</code></dt><dd>kpatch 관리 설정과 Workshop Repository에서 제공되는 <code>Available patches</code>를 확인합니다.</dd>
+</dl></div></div>
+
+<div class="callout warn"><strong>RHSM 미등록 메시지는 여기서는 무시해도 됩니다.</strong><p>아래 메시지는 현재 시스템이 Red Hat Subscription Management에 등록되지 않았다는 뜻이지만, <strong>Step 1~6의 실패를 의미하지 않습니다.</strong></p>
+<div class="code-card" data-lang="text"><div class="code-head"><span>정상적으로 표시될 수 있는 메시지</span></div><pre><code>Unable to read consumer identity
+
+This system is not registered with an entitlement server.</code></pre></div>
+<p><code>dnf repolist</code>에 <code>workshop-rhel10</code>이 표시되고, <code>dnf kpatch status</code>의 <code>Available patches</code>에 <code>kpatch-patch-6_12_0-211_16_1-1-5.el10_2.x86_64</code>가 보이면 정상입니다. 개인 Red Hat 계정 등록은 Step 7 Optional 실습에서 진행합니다.</p></div>
+
+<div class="table-scroll">
+<table class="verify compact-verify"><thead><tr><th>확인 항목</th><th>정상 기준</th></tr></thead><tbody>
+<tr><td>실행 중인 커널 (<code>uname -r</code>)</td><td>6.12.0-211.16.1.el10_2.x86_64</td></tr>
+<tr><td>커널 패키지 (<code>kernel-core</code>)</td><td>실행 중인 커널과 동일한 6.12.0-211.16.1.el10_2</td></tr>
+<tr><td>kpatch 도구 설치 상태 (<code>kpatch / kpatch-dnf</code>)</td><td>두 RPM version 모두 출력</td></tr>
+<tr><td>Transient DNF 지원 여부 (<code>dnf --help</code>)</td><td><code>--transient</code> 옵션 확인</td></tr>
+<tr><td>RHSM 등록 상태</td><td>미등록이어도 정상 · 기본 실습에서는 RHSM 불필요</td></tr>
+<tr><td>활성화된 저장소 (<code>dnf repolist</code>)</td><td><code>workshop-rhel10</code> / RHEL 10.2 Workshop Repository</td></tr>
+<tr><td>kpatch 상태 (<code>dnf kpatch status</code>)</td><td><code>Available patches: kpatch-patch-6_12_0-211_16_1-1-5.el10_2.x86_64</code> 확인</td></tr>
+</tbody></table>
+</div>
+<div class="callout ok"><strong>4-1 성공 기준</strong><p>RHSM이 미등록이어도 <code>workshop-rhel10</code> Repository와 대상 <code>kpatch-patch</code>가 확인되면 준비 완료입니다. 별도 RHSM 등록 없이 바로 4-2로 진행합니다.</p></div>
+
+<h3>4-2. 실제 live patch 적용</h3>
+<div class="callout info"><strong>Workshop Repository에서 바로 적용합니다.</strong><p>Repository/RHSM 분기 없이 모든 참가자가 같은 명령으로 실제 live patch를 적용합니다.</p></div>
+<div class="code-card" data-lang="shell"><div class="code-head"><span>Shell · dnf --transient + kpatch auto</span><div class="code-actions"><span class="quick-tip-wrap"><button aria-label="핵심 명령 빠른 설명" class="quick-tip" type="button">ⓘ</button><span class="quick-tip-pop" role="tooltip"><span class="tip-item"><b><code>dnf --transient kpatch auto</code></b>Image Mode의 영구 OS 이미지는 바꾸지 않고 현재 boot 세션에서 kpatch DNF transaction을 수행합니다.</span><span class="tip-item"><b><code>dnf kpatch status</code></b>kpatch-dnf가 관리하는 live patch stream/filter 상태를 확인합니다.</span><span class="tip-item"><b><code>kpatch list</code></b>현재 kernel에 설치·로드된 live patch module과 활성화([enabled]) 상태를 확인합니다.</span></span></span><button aria-controls="explain-21" aria-expanded="false" class="explain-toggle" type="button">명령어 설명</button><button class="copy" type="button">복사</button></div></div><pre><code># 현재 running kernel용 kpatch package가 Workshop Repository에 제공되는지 확인합니다.
+sudo dnf repoquery --showduplicates \
+  'kpatch-patch-6_12_0-211_16_1*'
+
+# 영구 OS image를 변경하지 않고 현재 부팅 세션에서 live patch를 적용합니다.
+sudo dnf --transient kpatch auto
+
+printf '\n=== kpatch 관리 설정 ===\n'
+sudo dnf kpatch status
+
+printf '\n=== 설치된 kpatch 패키지 ===\n'
+rpm -qa | grep '^kpatch' | sort
+
+printf '\n=== 로드 / 설치된 패치 모듈 ===\n'
+sudo kpatch list
+
+printf '\n=== 실행 중인 커널 ===\n'
+uname -r</code></pre>
+<div class="command-explain" id="explain-21"><div class="explain-title">필요할 때만 펼쳐보는 명령어 설명</div><dl>
+<dt><code>dnf repoquery --showduplicates ...</code></dt><dd>Workshop Repository에서 현재 running kernel에 대응하는 kpatch package를 확인합니다.</dd>
+<dt><code>dnf --transient kpatch auto</code></dt><dd>영구 bootc image 변경 없이 현재 boot의 transient overlay에서 kpatch를 적용합니다.</dd>
+<dt><code>dnf kpatch status</code></dt><dd>kpatch 자동 업데이트/filter 설정과 사용 가능한 patch를 확인합니다.</dd>
+<dt><code>rpm -qa | grep '^kpatch'</code></dt><dd>실제 kpatch-patch RPM 설치 여부를 확인합니다.</dd>
+<dt><code>kpatch list</code></dt><dd>live patch module이 <code>[enabled]</code> 상태인지 확인합니다.</dd>
+<dt><code>uname -r</code></dt><dd>live patch 전후 running kernel version이 그대로인지 확인합니다.</dd>
+</dl></div></div>
+<div class="table-scroll"><table class="verify"><thead><tr><th>검증 항목</th><th>정상 기준</th><th>의미</th></tr></thead><tbody>
+<tr><td>Workshop Repository의 kpatch 패키지 (<code>dnf repoquery</code>)</td><td>kpatch-patch-6_12_0-211_16_1-1-5.el10_2 확인</td><td>실습 대상 live patch package 제공</td></tr>
+<tr><td>kpatch Live Patch 적용 (<code>dnf --transient kpatch auto</code>)</td><td>오류 없이 완료</td><td>현재 boot 세션에서 live patch 적용</td></tr>
+<tr><td>설치된 kpatch 패키지 (<code>rpm -qa</code>)</td><td>kpatch-patch-6_12_0-211_16_1-1-5.el10_2 설치</td><td>delivery RPM 설치</td></tr>
+<tr><td>로드된 Live Patch 모듈 (<code>kpatch list</code>)</td><td>kpatch_6_12_0_211_16_1_1_5 [enabled]</td><td>실제 live patch module 활성화</td></tr>
+<tr><td>실행 중인 커널 (<code>uname -r</code>)</td><td>6.12.0-211.16.1.el10_2.x86_64 유지</td><td>kernel 교체/reboot 없이 patch 적용</td></tr>
+</tbody></table></div>
+<div class="callout ok"><strong>Step 4 성공 기준</strong><p><code>kpatch_6_12_0_211_16_1_1_5 [enabled]</code>가 확인되고 <code>uname -r</code>이 <code>6.12.0-211.16.1.el10_2.x86_64</code>로 그대로이면 성공입니다. 이제 Step 5 Userspace Update로 진행합니다.</p></div>
+</section><section id="s5"><div class="section-kicker">STEP 5</div><h2>Userspace Update Image 직접 생성</h2><p class="lead">새 repository 대신 같은 rhel10-cve-lab repository 안에 :userspace-update tag를 추가합니다.</p>
+<h3>5-1. 변경 전 상태 기록</h3><div class="code-card" data-lang="shell"><div class="code-head"><span>Shell · userspace baseline</span><div class="code-actions"><button aria-controls="explain-22" aria-expanded="false" class="explain-toggle" type="button">명령어 설명</button><button class="copy" type="button">복사</button></div></div><pre><code>mkdir -p ~/rhel10-cve-lab-state
+
+rpm -q openssl openssl-libs glibc \
+  | tee ~/rhel10-cve-lab-state/userspace-before.txt
+
+rpm -q kernel-core \
+  | tee ~/rhel10-cve-lab-state/kernel-package-before.txt
+
+uname -r \
+  | tee ~/rhel10-cve-lab-state/running-kernel-before.txt
+
+rpm -q tree || echo 'tree: NOT INSTALLED'
+cat /usr/share/lab-userspace-generation</code></pre><div class="command-explain" id="explain-22"><div class="explain-title">필요할 때만 펼쳐보는 명령어 설명</div><dl><dt><code>mkdir -p ~/rhel10-cve-lab-state</code></dt><dd>업데이트 전 상태를 파일로 보관할 작업 디렉터리를 만듭니다.</dd><dt><code>rpm -q ... | tee ...</code></dt><dd>OpenSSL/glibc와 kernel-core 버전을 화면에 보여주는 동시에 비교용 파일에도 저장합니다.</dd><dt><code>uname -r | tee ...</code></dt><dd>soft reboot 전 running kernel 버전을 저장해 이후 동일한지 비교합니다.</dd><dt><code>rpm -q tree</code></dt><dd>업데이트 이미지에서 새로 추가될 userspace marker 패키지가 현재는 없는지 확인합니다.</dd><dt><code>cat ...lab-userspace-generation</code></dt><dd>현재 userspace generation이 baseline인 1.0인지 확인합니다.</dd></dl></div></div><div class="table-scroll"><table class="verify"><thead><tr><th>검증 항목</th><th>정상 기준</th><th>의미</th></tr></thead><tbody><tr><td>Userspace 패키지 버전 (<code>OpenSSL / glibc</code>)</td><td>현재 EVR 기록</td><td>보안 업데이트 버전 비교 기준</td></tr><tr><td>Userspace 변경 확인 (<code>tree</code>)</td><td>NOT INSTALLED 기대</td><td>항상 보이는 userspace 변화 marker</td></tr><tr><td>Userspace 이미지 세대 (<code>generation</code>)</td><td>1.0</td><td>hardened baseline</td></tr><tr><td>실행 중인 커널 (<code>uname -r</code>)</td><td>파일 저장</td><td>soft reboot 후 동일성 비교</td></tr></tbody></table></div>
+<h3>5-2. 같은 repository의 두 번째 tag 작성</h3><div class="code-card" data-lang="containerfile"><div class="code-head"><span>Containerfile · :userspace-update</span><div class="code-actions"><button aria-controls="explain-23" aria-expanded="false" class="explain-toggle" type="button">명령어 설명</button><button class="copy" type="button">복사</button></div></div><pre><code>cat &lt;&lt;'EOF' &gt; Containerfile.userspace
+ARG HARDENED_IMAGE
+FROM ${HARDENED_IMAGE}
+
+# OpenSSL / glibc에 실제 업데이트가 있으면 반영합니다.
+# tree는 업데이트가 없는 날에도 userspace 변경을 눈으로 확인하기 위한 marker입니다.
+RUN dnf update -y \
+    openssl \
+    openssl-libs \
+    glibc \
+    &amp;&amp; dnf install -y tree \
+    &amp;&amp; dnf clean all
+
+RUN printf '%s\n' 'userspace-update' \
+      &gt; /usr/share/lab-image-stage \
+    &amp;&amp; printf '%s\n' '2.0' \
+      &gt; /usr/share/lab-userspace-generation
+EOF</code></pre><div class="command-explain" id="explain-23"><div class="explain-title">필요할 때만 펼쳐보는 명령어 설명</div><dl><dt><code>ARG HARDENED_IMAGE / FROM ${HARDENED_IMAGE}</code></dt><dd>Step 2의 Hardened 이미지를 그대로 부모 이미지로 사용해 두 번째 OS 이미지를 만듭니다.</dd><dt><code>dnf update openssl ... glibc</code></dt><dd>업데이트가 존재하면 주요 Userspace 패키지의 새 버전을 이미지에 반영합니다.</dd><dt><code>dnf install tree</code></dt><dd>패키지 업데이트가 없는 날에도 Userspace 이미지가 변경되었음을 확실히 보여주는 marker를 추가합니다.</dd><dt><code>lab-image-stage / generation 2.0</code></dt><dd>새 이미지가 userspace-update 단계임을 파일 값으로 명확하게 표시합니다.</dd></dl></div></div><div class="callout info"><strong>tree의 목적</strong><p>tree는 CVE 패치를 보여주기 위한 패키지가 아니라, OpenSSL/glibc가 이미 최신인 날에도 userspace가 실제 변경됐음을 항상 확인하기 위한 marker입니다.</p></div>
+<h3>5-3. Build + Push</h3><div class="code-card" data-lang="shell"><div class="code-head"><span>Shell · :userspace-update build/push</span><div class="code-actions"><button aria-controls="explain-24" aria-expanded="false" class="explain-toggle" type="button">명령어 설명</button><button class="copy" type="button">복사</button></div></div><pre><code># Build만 먼저 수행합니다.
+sudo podman build \
+  --build-arg HARDENED_IMAGE="${HARDENED_IMAGE}" \
+  -t "${USERSPACE_IMAGE}" \
+  -f Containerfile.userspace .
+
+# Local tag가 만들어졌는지 먼저 확인합니다.
+sudo podman image exists "${USERSPACE_IMAGE}" \
+  &amp;&amp; echo "Local userspace-update image: OK"
+
+sudo podman images "${LAB_REPO}"
+
+# 위 검증이 성공한 뒤에만 push합니다.
+sudo podman push "${USERSPACE_IMAGE}"
+
+# Remote tag를 다시 pull해 원격 manifest 접근까지 확인합니다.
+sudo podman pull "${USERSPACE_IMAGE}"</code></pre><div class="command-explain" id="explain-24"><div class="explain-title">필요할 때만 펼쳐보는 명령어 설명</div><dl><dt><code>podman build --build-arg HARDENED_IMAGE=...</code></dt><dd>Hardened 이미지를 부모로 지정해 Userspace Update 이미지를 빌드합니다.</dd><dt><code>-t "${USERSPACE_IMAGE}"</code></dt><dd>같은 Quay repository의 userspace-update tag를 부여합니다.</dd><dt><code>podman image exists / podman images</code></dt><dd>로컬 build 결과와 두 tag가 실제로 존재하는지 확인합니다.</dd><dt><code>podman push / podman pull</code></dt><dd>새 tag를 Quay에 업로드하고 원격에서 다시 받을 수 있는지 검증합니다.</dd></dl></div></div>
+<h3>5-4. soft reboot 전 Kernel 버전 확인</h3>
+<p>
+  다음 단계에서는 <strong>Kernel은 그대로 유지한 채 Userspace만 새 이미지로 변경하는 soft reboot</strong>를 수행합니다.
+  따라서 먼저 <code>:hardened</code> 이미지와 새로 만든 <code>:userspace-update</code> 이미지에 포함된
+  <strong>Kernel 버전이 서로 같은지 확인</strong>해야 합니다.
+</p>
+<div class="callout info">
+<strong>왜 확인하나요?</strong>
+<p>
+    soft reboot는 현재 실행 중인 Kernel을 다시 부팅하지 않고 Userspace만 새로 시작하는 방식입니다.
+    따라서 두 이미지의 Kernel 버전이 같아야 다음 단계의 soft reboot를 진행할 수 있습니다.
+    이번 실습에서는 두 이미지 모두 <code>6.12.0-211.16.1.el10_2</code> Kernel을 유지해야 합니다.
+  </p>
+</div>
+<div class="code-card" data-lang="shell">
+<div class="code-head">
+<span>Shell · 두 이미지의 Kernel / Userspace 비교</span>
+<div class="code-actions"><button aria-controls="explain-25" aria-expanded="false" class="explain-toggle" type="button">명령어 설명</button><button class="copy" type="button">복사</button></div></div>
+<pre><code>printf '=== hardened 이미지 : kernel-core ===\n'
+sudo podman run --rm "${HARDENED_IMAGE}" rpm -q kernel-core
+
+printf '\n=== userspace-update 이미지 : kernel-core ===\n'
+sudo podman run --rm "${USERSPACE_IMAGE}" rpm -q kernel-core
+
+printf '\n=== hardened 이미지 : Userspace ===\n'
+sudo podman run --rm "${HARDENED_IMAGE}" sh -lc \
+  'rpm -q openssl openssl-libs glibc; rpm -q tree || true; cat /usr/share/lab-userspace-generation'
+
+printf '\n=== userspace-update 이미지 : Userspace ===\n'
+sudo podman run --rm "${USERSPACE_IMAGE}" sh -lc \
+  'rpm -q openssl openssl-libs glibc tree; cat /usr/share/lab-userspace-generation'</code></pre><div class="command-explain" id="explain-25"><div class="explain-title">필요할 때만 펼쳐보는 명령어 설명</div><dl><dt><code>podman run ... rpm -q kernel-core</code></dt><dd>Hardened 이미지와 Userspace Update 이미지에 포함된 커널 패키지 버전을 각각 확인합니다.</dd><dt><code>rpm -q openssl ... glibc</code></dt><dd>Userspace 패키지 버전이 새 이미지에서 어떻게 달라졌는지 비교합니다.</dd><dt><code>rpm -q tree</code></dt><dd>Hardened 이미지에는 없고 Userspace Update 이미지에는 tree가 존재하는지 확인합니다.</dd><dt><code>lab-userspace-generation</code></dt><dd>generation 값이 1.0에서 2.0으로 바뀌었는지 확인합니다.</dd></dl></div>
+</div>
+<div class="table-scroll">
+<table class="verify">
+<thead>
+<tr>
+<th>확인 항목</th>
+<th>정상 기준</th>
+<th>의미</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>커널 패키지 (<code>kernel-core</code>)</td>
+<td>두 이미지 모두 <code>6.12.0-211.16.1.el10_2</code>로 동일</td>
+<td>Kernel 변경 없이 Userspace만 업데이트할 수 있는 상태입니다.</td>
+</tr>
+<tr>
+<td>Userspace 패키지 버전 (<code>OpenSSL / glibc</code>)</td>
+<td>업데이트가 있다면 <code>:userspace-update</code>에서 버전 상승</td>
+<td>Userspace 패키지 업데이트가 새 이미지에 반영되었습니다.</td>
+</tr>
+<tr>
+<td>Userspace 변경 확인 (<code>tree</code>)</td>
+<td><code>:hardened</code>에는 없고 <code>:userspace-update</code>에는 설치</td>
+<td>실제 Userspace 변경이 발생했음을 쉽게 확인하기 위한 marker입니다.</td>
+</tr>
+<tr>
+<td>Userspace 이미지 세대 (<code>generation</code>)</td>
+<td><code>1.0 → 2.0</code></td>
+<td>새 Userspace 이미지가 만들어졌음을 확인합니다.</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="callout ok">
+<strong>정상 예시</strong>
+<p>
+<code>:hardened</code>와 <code>:userspace-update</code>의
+    <code>kernel-core</code>가 모두
+    <code>kernel-core-6.12.0-211.16.1.el10_2.x86_64</code>로 동일하면
+    다음 단계의 soft reboot를 진행할 수 있습니다.
+  </p>
+</div>
+<div class="callout danger">
+<strong>Kernel 버전이 다르면 여기서 중지합니다.</strong>
+<p>
+    두 이미지의 <code>kernel-core</code> 버전이 다르면 soft reboot를 진행하지 않습니다.
+    새 Kernel을 사용하려면 일반적인 full reboot가 필요하기 때문입니다.
+  </p>
+</div>
+</section><section id="s6"><div class="section-kicker">STEP 6</div><h2>Userspace Update + systemd soft reboot</h2><p class="lead">새 userspace가 적용되었지만 running kernel은 그대로라는 것을 여러 증거로 교차 검증합니다.</p>
+<h3>6-1. 전환 직전 기록 + switch</h3><div class="code-card" data-lang="shell"><div class="code-head"><span>Shell · bootc switch + soft reboot</span><div class="code-acti
