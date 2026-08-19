@@ -1,1 +1,814 @@
-<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta http-equiv="refresh" content="0; url=../image-mode/"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Zero-CVE Guide</title><link rel="canonical" href="../image-mode/"></head><body><p><a href="../image-mode/">Zero-CVE 실습 가이드로 이동</a></p><script>location.replace('../image-mode/');</script></body></html>
+<!DOCTYPE html>
+
+<html lang="ko"><head><meta charset="utf-8"/><meta content="width=device-width,initial-scale=1" name="viewport"/><title>RHEL 10.0 → 10.2 Image Mode Hands-on + CVE Verification</title>
+<style>
+:root{
+--bg:#0b0c0f;--sidebar:#0f1115;--panel:#14161b;--panel2:#1b1f26;--text:#f5f7fa;--muted:#b7bdc8;
+--red:#ee0000;--red2:#ff6b62;--line:#303743;--code:#0d1117;--codeHead:#1d2430;--codeText:#edf3f8;
+--tableAlt:#11151a;--th:#20252d;--button:#20252d;--buttonHover:#343c49;
+--green:#31c48d;--yellow:#f6c344;--blue:#60a5fa;--purple:#c4b5fd;
+}
+html[data-theme="light"]{
+--bg:#ffffff;--sidebar:#f7f7f8;--panel:#ffffff;--panel2:#f1f3f5;--text:#171717;--muted:#59636e;
+--red:#cc0000;--red2:#a30000;--line:#d7dce2;--code:#f6f8fa;--codeHead:#eef1f4;--codeText:#17202a;
+--tableAlt:#fafbfc;--th:#f0f2f4;--button:#ffffff;--buttonHover:#eceff2;
+--green:#087f5b;--yellow:#9a6700;--blue:#0969da;--purple:#6f42c1;
+}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--text);transition:background .18s ease,color .18s ease;font-family:"Noto Sans KR","Noto Sans CJK KR",system-ui,sans-serif;line-height:1.72}a{color:#84b8ff}.layout{display:grid;grid-template-columns:300px minmax(0,1fr);min-height:100vh}aside{position:sticky;top:0;height:100vh;overflow:auto;border-right:1px solid var(--line);background:var(--sidebar);padding:24px 18px}aside .brand{font-weight:900;font-size:18px;margin-bottom:6px}aside .subbrand{font-size:12px;color:var(--muted);margin-bottom:18px}aside a{display:block;text-decoration:none;color:var(--muted);padding:8px 10px;border-radius:8px;font-size:14px}aside a:hover{background:var(--panel2);color:var(--text)}main{max-width:1120px;padding:46px 58px 100px}.eyebrow{color:var(--red2);font-weight:900;letter-spacing:.09em;font-size:13px}h1{font-size:42px;line-height:1.16;margin:8px 0 14px}h2{font-size:29px;line-height:1.3;margin:8px 0 10px}h3{font-size:20px;margin-top:32px;margin-bottom:10px}p{margin:8px 0 14px}.hero-sub{font-size:18px;color:var(--muted)}section{padding-top:38px;margin-top:30px;border-top:1px solid var(--line)}.section-kicker{display:inline-block;background:var(--red);padding:3px 10px;border-radius:999px;font-weight:900;font-size:12px;letter-spacing:.04em}.lead{font-size:16px;color:var(--text);max-width:900px}.flow{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin:28px 0}.flow .box{background:var(--panel);border:1px solid var(--line);border-top:4px solid var(--red);padding:15px 12px;border-radius:10px;min-height:118px}.flow b{display:block;font-size:14px;margin-bottom:7px}.flow span{font-size:12px;color:var(--muted)}.tag-model{display:flex;gap:14px;align-items:center;flex-wrap:wrap;background:var(--panel);padding:18px;border:1px solid var(--line);border-radius:12px;margin:18px 0}.repo{font-family:ui-monospace,monospace;color:var(--text)}.tag{background:#282d36;border:1px solid #454d5c;padding:7px 11px;border-radius:8px;font-family:ui-monospace,monospace}.arrow{color:var(--muted)}.callout{padding:14px 17px;border-radius:10px;margin:16px 0;background:var(--panel);border-left:4px solid var(--blue)}.callout p{margin:5px 0 0;color:var(--text)}.callout.warn{border-left-color:var(--yellow)}.callout.danger{border-left-color:var(--red)}.callout.ok{border-left-color:var(--green)}.callout strong{color:var(--text)}.code-card{margin:15px 0 20px;border:1px solid #313844;border-radius:12px;overflow:hidden;background:var(--code);box-shadow:0 8px 24px rgba(0,0,0,.16)}.code-head{display:flex;justify-content:space-between;align-items:center;background:var(--codeHead);color:var(--text);padding:10px 14px;font-size:12.5px;font-weight:900;border-bottom:1px solid #3a4352;position:sticky;left:0}button.copy{background:var(--button);color:var(--text);border:1px solid var(--line);border-radius:7px;padding:5px 10px;cursor:pointer}button.copy:hover{background:var(--buttonHover)}pre{margin:0;overflow:auto;padding:22px 24px;tab-size:4;white-space:pre;line-height:1.78;background:var(--code);scrollbar-color:#4b5563 #111827}code{font-family:"Cascadia Code","SFMono-Regular","Liberation Mono",Consolas,monospace;font-size:14.5px;font-variant-ligatures:none;color:var(--codeText);letter-spacing:.005em}code .com{color:#7fb07f}code .kw{color:#ff7b72;font-weight:700}code .cmd{color:#79c0ff;font-weight:700}code .str{color:#a5d6ff}code .var{color:#d2a8ff}.table-scroll{overflow:auto;margin:13px 0 22px}table{width:100%;border-collapse:collapse;background:var(--panel);font-size:14px}th,td{border:1px solid var(--line);padding:11px 12px;vertical-align:top}th{background:var(--th);text-align:left;color:var(--text)}td:nth-child(2){background:var(--tableAlt)}.verify td:first-child{font-weight:800;white-space:nowrap}.mini{font-size:13px;color:var(--muted)}.checklist label{display:block;padding:7px 4px}.checklist input{margin-right:8px}.progress{height:8px;background:#282e37;border-radius:99px;overflow:hidden;margin:10px 0 6px}.progress>span{display:block;height:100%;width:0;background:var(--green);transition:.2s}.toolbar{display:flex;gap:10px;flex-wrap:wrap;margin:18px 0}.toolbar button{background:var(--button);color:var(--text);border:1px solid var(--line);padding:7px 11px;border-radius:8px;cursor:pointer}.ref-list li{margin:8px 0;word-break:break-all}
+.theme-switch{display:flex;gap:6px;margin:0 0 18px;padding:5px;background:var(--panel2);border:1px solid var(--line);border-radius:10px}
+.theme-switch button{flex:1;border:1px solid transparent;border-radius:7px;padding:7px 8px;background:transparent;color:var(--muted);font-weight:800;cursor:pointer}
+.theme-switch button:hover{color:var(--text)}
+.theme-switch button.active{background:var(--bg);color:var(--text);border-color:var(--line);box-shadow:0 1px 4px rgba(0,0,0,.10)}
+html[data-theme="light"] .code-card{box-shadow:0 5px 18px rgba(20,30,40,.08)}
+html[data-theme="light"] .tag{background:#f4f5f6;border-color:#d1d7de}
+html[data-theme="light"] code .com{color:#1a7f37}
+html[data-theme="light"] code .kw{color:#cf222e}
+html[data-theme="light"] code .cmd{color:#0969da}
+html[data-theme="light"] code .str{color:#0550ae}
+html[data-theme="light"] code .var{color:#8250df}
+@media(max-width:980px){.layout{display:block}aside{position:relative;height:auto;border-right:0;border-bottom:1px solid var(--line)}main{padding:30px 20px}h1{font-size:32px}.flow{grid-template-columns:repeat(2,1fr)}}@media print{aside,.copy,.toolbar{display:none!important}body{background:white;color:#111}main{max-width:none;padding:0}section{break-before:page}.callout,table,.code-card{break-inside:avoid}pre{background:#f6f6f6;color:#111}}
+
+/* --- Interactive command help --- */
+.code-actions{display:flex;align-items:center;gap:7px;margin-left:auto}
+button.explain-toggle,button.quick-tip{
+  background:var(--button);color:var(--text);border:1px solid var(--line);
+  border-radius:7px;padding:5px 9px;cursor:pointer;font-size:12px;font-weight:800
+}
+button.explain-toggle:hover,button.quick-tip:hover{background:var(--buttonHover)}
+button.explain-toggle[aria-expanded="true"]{border-color:var(--blue);color:var(--blue)}
+.command-explain{
+  display:none;border-top:1px solid var(--line);background:var(--panel);
+  padding:14px 17px 15px
+}
+.command-explain.open{display:block}
+.command-explain .explain-title{font-size:12px;font-weight:900;color:var(--muted);margin-bottom:9px}
+.command-explain dl{margin:0;display:grid;grid-template-columns:minmax(170px,32%) 1fr;gap:7px 14px}
+.command-explain dt{margin:0;font-weight:800;min-width:0}
+.command-explain dd{margin:0;color:var(--muted);font-size:13px}
+.command-explain dt code{font-size:12.5px;overflow-wrap:anywhere}
+.quick-tip-wrap{position:relative;display:inline-flex}
+button.quick-tip{padding:5px 8px}
+.quick-tip-pop{
+  display:none;position:absolute;z-index:50;right:0;top:calc(100% + 8px);
+  width:min(440px,75vw);padding:11px 13px;border-radius:9px;
+  border:1px solid var(--line);background:var(--panel2);color:var(--text);
+  box-shadow:0 12px 30px rgba(0,0,0,.25);font-size:12.5px;font-weight:500;
+  line-height:1.55;text-align:left
+}
+.quick-tip-wrap:hover .quick-tip-pop,
+.quick-tip-wrap:focus-within .quick-tip-pop,
+.quick-tip-wrap.open .quick-tip-pop{display:block}
+.quick-tip-pop b{display:block;margin:0 0 5px;font-size:12px;color:var(--blue)}
+.quick-tip-pop .tip-item+.tip-item{margin-top:9px;padding-top:9px;border-top:1px solid var(--line)}
+.quick-tip-pop code{font-size:12px}
+@media(max-width:700px){
+  .code-head{align-items:flex-start;gap:8px}
+  .code-actions{flex-wrap:wrap;justify-content:flex-end}
+  .command-explain dl{grid-template-columns:1fr;gap:3px}
+  .command-explain dd{margin:0 0 8px}
+  .quick-tip-pop{position:fixed;left:16px;right:16px;top:auto;bottom:16px;width:auto;max-height:55vh;overflow:auto}
+}
+
+/* --- 60-minute workshop compact/optional sections --- */
+.core-path{display:flex;gap:7px;align-items:stretch;flex-wrap:wrap;margin:16px 0 22px}
+.core-path span{display:flex;align-items:center;gap:5px;background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:8px 10px;font-size:12.5px}
+.core-path b{color:var(--red2)}
+details.optional-details{margin:14px 0 20px;border:1px solid var(--line);border-radius:10px;background:var(--panel);overflow:hidden}
+details.optional-details>summary{cursor:pointer;list-style:none;padding:12px 15px;font-weight:900;color:var(--text);background:var(--panel2)}
+details.optional-details>summary::-webkit-details-marker{display:none}
+details.optional-details>summary::before{content:"▸";display:inline-block;margin-right:8px;color:var(--blue)}
+details.optional-details[open]>summary::before{content:"▾"}
+details.optional-details>.details-body{padding:4px 15px 12px}
+details.optional-details .code-card{margin-left:0;margin-right:0}
+.compact-verify td:first-child{width:38%;white-space:normal}
+@media(max-width:700px){.core-path{display:grid;grid-template-columns:1fr 1fr}}
+
+/* --- Optional CVE verification section --- */
+.cve-options{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:16px 0 22px}
+.cve-option{border:1px solid var(--line);background:var(--panel);border-radius:12px;padding:16px}
+.cve-option h4{margin:0 0 8px;font-size:17px}
+.cve-option p{margin:0;color:var(--muted)}
+.console-shot{margin:16px 0;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--panel)}
+.console-shot img{display:block;width:100%;height:auto}
+.console-shot figcaption{padding:10px 13px;color:var(--muted);font-size:13px;border-top:1px solid var(--line)}
+.fact-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:14px 0}
+.fact-card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px}
+.fact-card b{display:block;margin-bottom:6px}
+@media(max-width:760px){.cve-options,.fact-grid{grid-template-columns:1fr}}
+</style></head><body><div class="layout"><aside><div class="brand">RHEL 10.2 Hands-on</div><div class="subbrand">Quay repository 1개 · tag 2개</div>
+<div aria-label="화면 테마 선택" class="theme-switch">
+<button id="theme-dark" onclick="setTheme('dark')" type="button">Dark</button>
+<button id="theme-light" onclick="setTheme('light')" type="button">Light</button>
+</div><a href="#overview">전체 흐름</a><a href="#s1">1. 사전 준비</a><a href="#s2">2. Hardened Image</a><a href="#s3">3. Image Mode 전환</a><a href="#s4">4. kpatch</a><a href="#s5">5. Userspace Update</a><a href="#s6">6. soft reboot</a><a href="#s7">7. CVE 검증 (선택)</a><a href="#s8">8. Rollback/문제해결</a><a href="#check">최종 체크리스트</a><a href="#refs">참고 문서</a></aside><main>
+<div class="eyebrow" id="overview">RED HAT ENTERPRISE LINUX 10</div><h1>RHEL 10.0 Shared → RHEL 10.2 Image Mode<br/>Quay Tag 기반 CVE 신속 대응 실습</h1><div class="hero-sub">Hardened Image + kpatch + Userspace Update + systemd soft reboot</div>
+<div class="tag-model"><span class="repo">quay.io/&lt;QUAY_USER&gt;/rhel10-cve-lab</span><span class="arrow">→</span><span class="tag">:hardened</span><span class="tag">:userspace-update</span></div>
+<div class="flow"><div class="box"><b>① RHEL 10.0</b><span>OpenTLC Shared<br/>Package Mode</span></div><div class="box"><b>② Hardened Build</b><span>참가자가 Containerfile 직접 작성</span></div><div class="box"><b>③ Quay</b><span>같은 repo의 :hardened tag</span></div><div class="box"><b>④ Image Mode</b><span>RHEL 10.2로 OS 전환</span></div><div class="box"><b>⑤ kpatch</b><span>Kernel CVE live patch</span></div><div class="box"><b>⑥ Userspace</b><span>:userspace-update + soft reboot</span></div></div>
+<div class="callout ok"><strong>핵심</strong><p>Kernel은 kpatch로 실행 중 커널을 패치하고, OpenSSL/glibc 같은 Userspace는 새 bootc image로 만들어 soft reboot로 적용합니다. 두 기술의 역할을 분리해서 이해하는 것이 이 실습의 목적입니다.</p></div>
+<div class="callout warn"><strong>Zero-CVE 표현</strong><p>모든 취약점이 항상 0개라는 보장이 아니라, 취약점 유형에 맞는 업데이트 경로를 조합해 패치 지연과 다운타임을 줄이는 운영 모델을 의미합니다.</p></div><div class="core-path"><span><b>0–5분</b> Step 1 사전 준비</span><span><b>5–20분</b> Step 2 Hardened</span><span><b>20–32분</b> Step 3 OS 전환</span><span><b>32–42분</b> Step 4 kpatch</span><span><b>42–55분</b> Step 5–6 Userspace/soft reboot</span><span><b>55–60분</b> Step 6 최종 확인 + 체크리스트</span></div><div class="callout info"><strong>60분 진행 기준</strong><p>Step 1~6과 최종 체크리스트가 60분 core path입니다. Step 4는 Source Image에 사전 구성된 <code>workshop-rhel10</code> Repository를 사용하므로 <strong>RHSM 등록 없이 실제 kpatch live patch를 적용</strong>합니다. <strong>Step 7 RHEL 10 CVE 검증은 선택 실습</strong>으로, 이 단계에서 필요할 경우 개인 Red Hat 계정으로 RHSM과 Red Hat Lightspeed에 등록한 뒤 <code>dnf updateinfo</code> 또는 console.redhat.com에서 CVE를 확인합니다. <strong>Step 8 Rollback은 시간이 남을 때만 수행하는 추가 실습</strong>입니다.</p></div>
+<section id="s1"><div class="section-kicker">STEP 1</div><h2>사전 준비와 변수</h2><p class="lead">현재 host, source bootc image, push할 두 tag를 먼저 명확하게 구분합니다.</p>
+<h3>1-1. 출발 RHEL 10.0 확인</h3><div class="code-card" data-lang="shell"><div class="code-head"><span>Shell · 출발 환경 확인</span><div class="code-actions"><span class="quick-tip-wrap"><button aria-label="핵심 명령 빠른 설명" class="quick-tip" type="button">ⓘ</button><span class="quick-tip-pop" role="tooltip"><span class="tip-item"><b><code>system-reinstall-bootc</code></b>현재 root OS를 지정한 bootc 이미지 기반 OS로 다시 설치합니다. 파괴적 작업이므로 대상 이미지와 인증을 먼저 검증합니다.</span></span></span><button aria-controls="explain-1" aria-expanded="false" class="explain-toggle" type="button">명령어 설명</button><button class="copy" type="button">복사</button></div></div><pre><code>cat /etc/redhat-release
+uname -r
+command -v podman
+
+# 새 RHEL 10.0 환경에서 system-reinstall-bootc가 없으면 설치합니다.
+if ! command -v system-reinstall-bootc &gt;/dev/null 2&gt;&amp;1; then
+  echo "system-reinstall-bootc가 없어 설치합니다."
+  sudo dnf install -y system-reinstall-bootc
+fi
+command -v system-reinstall-bootc
+
+df -h /</code></pre><div class="command-explain" id="explain-1"><div class="explain-title">필요할 때만 펼쳐보는 명령어 설명</div><dl><dt><code>cat /etc/redhat-release</code></dt><dd>현재 OS가 실습 출발점인 RHEL 10.0인지 확인합니다.</dd><dt><code>uname -r</code></dt><dd>현재 실행 중인 Linux kernel 버전을 확인합니다.</dd><dt><code>command -v podman</code></dt><dd>Podman이 설치되어 있고 실행 가능한지 확인합니다.</dd><dt><code>system-reinstall-bootc 확인/설치</code></dt><dd>새 환경에서 도구가 없으면 DNF로 설치한 뒤 경로를 다시 확인합니다.</dd><dt><code>df -h /</code></dt><dd>이미지 pull/build 및 OS 전환에 필요한 root filesystem 여유 공간을 확인합니다.</dd></dl></div></div><div class="table-scroll"><table class="verify"><thead><tr><th>검증 항목</th><th>정상 기준</th><th>의미</th></tr></thead><tbody><tr><td>운영체제 버전 (<code>/etc/redhat-release</code>)</td><td>RHEL 10.0 (Coughlan)</td><td>아직 Package Mode Shared 환경</td></tr><tr><td>Image Mode 전환 도구 (<code>system-reinstall-bootc</code>)</td><td>경로 출력 (없으면 자동 설치)</td><td>새 RHEL 10.0 환경에서도 OS 전환 도구를 준비</td></tr><tr><td>디스크 여유 공간 (<code>df -h /</code>)</td><td>충분한 여유 공간</td><td>image pull/install용 공간 확인</td></tr></tbody></table></div>
+<h3>1-2. Quay repository 준비 + 로그인</h3>
+<div class="callout warn"><strong>먼저 Quay repository를 생성합니다.</strong><p>Quay.io에서 본인 계정 아래 <code>rhel10-cve-lab</code> repository를 생성한 뒤 아래 명령을 진행합니다. Quay 로그인 시 <strong>repository namespace로 사용하는 Quay Username</strong>으로 로그인하면, 아래 명령이 로그인 정보를 자동으로 가져옵니다.</p></div>
+<div class="code-card" data-lang="shell"><div class="code-head"><span>Shell · Quay 로그인 + 변수</span><div class="code-actions"><button aria-controls="explain-2" aria-expanded="false" class="explain-toggle" type="button">명령어 설명</button><button class="copy" type="button">복사</button></div></div><pre><code>sudo podman login quay.io
+
+# 방금 로그인한 Quay Username을 자동으로 가져옵니다.
+export QUAY_USER="$(sudo podman login --get-login quay.io)"
+
+export SOURCE_BOOTC_IMAGE="quay.io/yeslee/rhel10-bootc:10.2"
+export LAB_REPO="quay.io/${QUAY_USER}/rhel10-cve-lab"
+export HARDENED_IMAGE="${LAB_REPO}:hardened"
+export USERSPACE_IMAGE="${LAB_REPO}:userspace-update"
+
+printf '원본 이미지      : %s\n' "${SOURCE_BOOTC_IMAGE}"
+printf 'Hardened 이미지  : %s\n' "${HARDENED_IMAGE}"
+printf '업데이트 이미지  : %s\n' "${USERSPACE_IMAGE}"</code></pre><div class="command-explain" id="explain-2"><div class="explain-title">필요할 때만 펼쳐보는 명령어 설명</div><dl><dt><code>sudo podman login quay.io</code></dt><dd>Quay push를 위해 root Podman 인증 정보를 준비합니다.</dd><dt><code>podman login --get-login quay.io</code></dt><dd>방금 로그인한 Quay Username을 자동으로 가져와 <code>QUAY_USER</code> 변수에 저장합니다.</dd><dt><code>LAB_REPO</code></dt><dd>본인 Quay 계정 아래 미리 생성한 <code>rhel10-cve-lab</code> repository 경로를 구성합니다.</dd><dt><code>HARDENED_IMAGE / USERSPACE_IMAGE</code></dt><dd>같은 repository에서 두 단계를 tag로 구분합니다.</dd></dl></div></div><div class="table-scroll"><table class="verify"><thead><tr><th>검증 항목</th><th>정상 기준</th><th>의미</th></tr></thead><tbody><tr><td>원본 bootc 이미지 (<code>SOURCE_BOOTC_IMAGE</code>)</td><td>quay.io/yeslee/rhel10-bootc:10.2</td><td>RHEL 10.2 source bootc image · kpatch 실습용 kernel 6.12.0-211.16.1.el10_2 사전 고정</td></tr><tr><td>Hardened 이미지 (<code>HARDENED_IMAGE</code>)</td><td>quay.io/&lt;로그인한 Quay Username&gt;/rhel10-cve-lab:hardened</td><td>초기 보안 강화 tag</td></tr><tr><td>Userspace 업데이트 이미지 (<code>USERSPACE_IMAGE</code>)</td><td>quay.io/&lt;로그인한 Quay Username&gt;/rhel10-cve-lab:userspace-update</td><td>userspace 변경 tag</td></tr></tbody></table></div></section><section id="s2"><div class="section-kicker">STEP 2</div><h2>Hardened Image 직접 생성</h2><p class="lead">사전 검증된 RHEL 10.2 bootc source image를 기반으로, 서버 설치 후 수동 보안 설정을 하는 대신 보안 설정이 포함된 OS image 자체를 참가자가 만듭니다.</p>
+<h3>2-1. lab-user 비밀번호 hash</h3><div class="code-card" data-lang="shell"><div class="code-head"><span>Shell · password hash</span><div class="code-actions"><button aria-controls="explain-3" aria-expanded="false" class="explain-toggle" type="button">명령어 설명</button><button class="copy" type="button">복사</button></div></div><pre><code>read -s -p "새 bootc 시스템에서 사용할 lab-user 비밀번호: " LAB_PASSWORD
+echo
+LAB_PASSWORD_HASH=$(openssl passwd -6 "${LAB_PASSWORD}")
+unset LAB_PASSWORD
+echo "Password hash length: ${#LAB_PASSWORD_HASH}"</code></pre><div class="command-explain" id="explain-3"><div class="explain-title">필요할 때만 펼쳐보는 명령어 설명</div><dl><dt><code>read -s -p ...</code></dt><dd>비밀번호를 화면에 표시하지 않고 입력받아 LAB_PASSWORD 변수에 임시 저장합니다.</dd><dt><code>openssl passwd -6</code></dt><dd>입력한 비밀번호를 SHA-512 crypt 형식의 해시로 변환합니다. 평문 비밀번호를 이미지에 직접 넣지 않기 위한 단계입니다.</dd><dt><code>unset LAB_PASSWORD</code></dt><dd>해시 생성 후 평문 비밀번호 변수를 현재 셸에서 즉시 제거합니다.</dd><dt><code>${#LAB_PASSWORD_HASH}</code></dt><dd>해시 문자열이 비어 있지 않은지 길이만 확인합니다. 실제 해시 값은 화면에 출력하지 않습니다.</dd></dl></div></div><div class="callout warn"><strong>운영 환경 주의</strong><p>실습에서는 단순화를 위해 hash를 build ARG로 전달합니다. 운영에서는 SSH key/build secret/systemd credential 같은 방법을 고려합니다.</p></div>
+<div class="callout info"><strong>실습용 Source Image</strong><p><code>quay.io/yeslee/rhel10-bootc:10.2</code>에는 kpatch 실습에 사용할 <code>kernel-6.12.0-211.16.1.el10_2</code>가 사전에 고정되어 있고, 기본 실습에 필요한 패키지를 제공하는 <code>workshop-rhel10</code> DNF Repository 설정도 포함되어 있습니다. 따라서 Step 1~6에서는 참가자가 RHSM을 별도로 등록할 필요가 없습니다. 참가자는 해당 base image를 기반으로 Hardening과 Image Mode 업데이트 흐름에 집중합니다.</p></div><h3>2-2. Hardened Containerfile</h3><div class="code-card" data-lang="containerfile"><div class="code-head"><span>Containerfile · :hardened 전체</span><div class="code-actions"><span class="quick-tip-wrap"><button aria-label="핵심 명령 빠른 설명" class="quick-tip" type="button">ⓘ</button><span class="quick-tip-pop" role="tooltip"><span class="tip-item"><b><code>bootc container lint</code></b>컨테이너가 bootc OS 이미지로 사용할 수 있는 기본 구조를 충족하는지 검사합니다.</span></span></span><button aria-controls="explain-4" aria-expanded="false" class="explain-toggle" type="button">명령어 설명</button><button class="copy" type="button">복사</button></div></div><pre><code>cat &lt;&lt;'EOF' &gt; Containerfile.hardened
+FROM quay.io/yeslee/rhel10-bootc:10.2
+
+ARG LAB_PASSWORD_HASH
+
+# ------------------------------------------------------------
+# 0. 실습용 Source Image의 kernel 검증
+#    Source Image 자체에 kpatch 실습 대상 kernel이 사전 고정되어 있습니다.
+# ------------------------------------------------------------
+RUN rpm -q kernel-core     | grep -q '6.12.0-211.16.1.el10_2'
+
+# ------------------------------------------------------------
+# 1. 실습 및 검증에 필요한 패키지 설치
+# ------------------------------------------------------------
+RUN dnf install -y \
+    openssh-server \
+    sudo \
+    podman \
+    rhc \
+    insights-client \
+    kpatch \
+    kpatch-dnf \
+    &amp;&amp; dnf clean all
+
+# ------------------------------------------------------------
+# 2. 재부팅 후 접속할 lab-user 구성
+# ------------------------------------------------------------
+RUN if ! id lab-user &gt;/dev/null 2&gt;&amp;1; then \
+        useradd -m -s /bin/bash lab-user; \
+    fi \
+    &amp;&amp; usermod -aG wheel lab-user \
+    &amp;&amp; usermod -p "${LAB_PASSWORD_HASH}" lab-user \
+    &amp;&amp; mkdir -p /etc/sudoers.d \
+    &amp;&amp; printf '%s\n' \
+       'lab-user ALL=(ALL) NOPASSWD: ALL' \
+       &gt; /etc/sudoers.d/lab-user \
+    &amp;&amp; chmod 440 /etc/sudoers.d/lab-user
+
+# ------------------------------------------------------------
+# 3. SSH 비밀번호 로그인 허용 - 실습 편의용
+# ------------------------------------------------------------
+RUN mkdir -p /etc/ssh/sshd_config.d \
+    &amp;&amp; printf '%s\n' \
+       'PasswordAuthentication yes' \
+       'KbdInteractiveAuthentication yes' \
+       'PermitRootLogin no' \
+       &gt; /etc/ssh/sshd_config.d/00-lab-access.conf \
+    &amp;&amp; systemctl enable sshd.service
+
+# ------------------------------------------------------------
+# 4. SELinux Enforcing 유지
+# ------------------------------------------------------------
+RUN sed -ri \
+    's/^SELINUX=.*/SELINUX=enforcing/' \
+    /etc/selinux/config
+
+# ------------------------------------------------------------
+# 5. 기본 hardening sysctl
+# ------------------------------------------------------------
+RUN printf '%s\n' \
+    'net.ipv4.conf.all.rp_filter=1' \
+    'net.ipv4.tcp_syncookies=1' \
+    'kernel.unprivileged_bpf_disabled=1' \
+    &gt; /etc/sysctl.d/99-hardening.conf
+
+# ------------------------------------------------------------
+# 6. 실습 단계 식별용 marker
+# ------------------------------------------------------------
+RUN printf '%s\n' 'hardened' \
+      &gt; /usr/share/lab-image-stage \
+    &amp;&amp; printf '%s\n' '1.0' \
+      &gt; /usr/share/lab-userspace-generation
+
+# bootc image에 kernel이 정확히 1개만 포함되어 있는지 포함해 최종 구조 검증
+RUN bootc container lint
+EOF</code></pre><div class="command-explain" id="explain-4"><div class="explain-title">필요할 때만 펼쳐보는 명령어 설명</div><dl><dt><code>FROM ...</code></dt><dd>사전에 검증한 RHEL 10.2 bootc 이미지를 기반 이미지로 사용합니다.</dd><dt><code>ARG LAB_PASSWORD_HASH</code></dt><dd>빌드 시 전달받은 lab-user 비밀번호 해시를 Containerfile 안에서 사용합니다.</dd><dt><code>rpm -q kernel-core | grep ...</code></dt><dd>실습에 필요한 6.12.0-211.16.1.el10_2 커널이 base image에 실제 포함되어 있는지 확인합니다.</dd><dt><code>dnf install ...</code></dt><dd>SSH, sudo, Podman, RHC/Lightspeed client, kpatch 등 이후 실습에 필요한 패키지를 OS 이미지 안에 포함합니다.</dd><dt><code>useradd / usermod / sshd_config</code></dt><dd>재부팅 후 접속할 lab-user와 sudo 권한, SSH 비밀번호 로그인 설정을 이미지에 코드로 정의합니다.</dd><dt><code>sysctl / SELinux / marker</code></dt><dd>보안 강화 설정과 실습 단계 식별용 파일을 이미지에 기록합니다.</dd><dt><code>bootc container lint</code></dt><dd>완성된 컨테이너가 bootc OS 이미지로 사용 가능한 구조인지 검사합니다.</dd></dl></div></div>
+<div class="callout warn"><strong>실습 편의 설정</strong><p>이 실습은 접속 편의를 위해 <code>PasswordAuthentication yes</code>와 <code>lab-user NOPASSWD sudo</code>를 사용합니다. 두 항목은 운영 환경의 hardening 권고가 아니라 실습 편의를 위한 예외입니다. 여기서 Hardened Image는 SELinux/sysctl 등 보안 설정을 OS 이미지에 코드화하는 방식을 보여주는 예시입니다.</p></div><h3>2-3. Hardening 의미</h3><div class="table-scroll"><table class="verify"><thead><tr><th>검증 항목</th><th>정상 기준</th><th>의미</th></tr></thead><tbody><tr><td>rp_filter=1</td><td>Strict reverse path filtering</td><td>IP spoofing 대응에 도움. 비대칭 routing은 주의</td></tr><tr><td>tcp_syncookies=1</td><td>SYN Cookie</td><td>SYN backlog 고갈 상황의 대응 보조</td></tr><tr><td>unprivileged_bpf_disabled=1</td><td>비권한 BPF 제한</td><td>eBPF 공격 표면 축소. 관측 도구 요구사항 확인</td></tr><tr><td>SELINUX=enforcing</td><td>SELinux 강제</td><td>정책 위반 접근을 실제 차단</td></tr><tr><td>kpatch/kpatch-dnf</td><td>live patch 도구 포함</td><td><code>6.12.0-211.16.1.el10_2</code> kernel에서 실제 kpatch 적용 실습</td></tr></tbody></table></div>
+<h3>2-4. Build</h3><div class="code-card" data-lang="shell"><div class="code-head"><span>Shell · :hardened build</span><div class="code-actions"><button aria-controls="explain-5" aria-expanded="false" class="explain-toggle" type="button">명령어 설명</button><button class="copy" type="button">복사</button></div></div><pre><code>sudo podman build \
+  --build-arg LAB_PASSWORD_HASH="${LAB_PASSWORD_HASH}" \
+  -t "${HARDENED_IMAGE}" \
+  -f Containerfile.hardened .
+
+sudo podman image exists "${HARDENED_IMAGE}" \
+  &amp;&amp; echo "Local hardened image: OK"
+
+sudo podman images "${LAB_REPO}"
+
+unset LAB_PASSWORD_HASH</code></pre><div class="command-explain" id="explain-5"><div class="explain-title">필요할 때만 펼쳐보는 명령어 설명</div><dl><dt><code>podman build --build-arg ...</code></dt><dd>2-1에서 만든 lab-user 비밀번호 해시를 전달해 Hardened OS 이미지를 빌드합니다.</dd><dt><code>-t "${HARDENED_IMAGE}"</code></dt><dd>완성된 로컬 이미지에 본인의 Quay repository와 <code>:hardened</code> tag를 지정합니다.</dd><dt><code>podman image exists</code></dt><dd>build가 성공해 해당 tag의 로컬 이미지가 실제 생성되었는지 확인합니다.</dd><dt><code>unset LAB_PASSWORD_HASH</code></dt><dd>build가 끝난 뒤 현재 shell에 남아 있는 비밀번호 해시 변수를 제거합니다.</dd></dl></div></div><div class="callout danger"><strong>성공 후 다음 명령</strong><p>Build가 실패했다면 run/push를 이어서 실행하지 않습니다. 뒤의 repository not found는 첫 build 실패가 만든 연쇄 오류일 수 있습니다.</p></div>
+<h3>2-5. Image 내부 검증</h3><div class="code-card" data-lang="shell"><div class="code-head"><span>Shell · :hardened 내용 검증</span><div class="code-actions"><button aria-controls="explain-6" aria-expanded="false" class="explain-toggle" type="button">명령어 설명</button><button class="copy" type="button">복사</button></div></div><pre><code>sudo podman run --rm "${HARDENED_IMAGE}" sh -lc '
+set -e
+printf "=== 운영체제 ===\n"
+cat /etc/redhat-release
+
+printf "\n=== 이미지 식별 정보 ===\n"
+cat /usr/share/lab-image-stage
+cat /usr/share/lab-userspace-generation
+
+printf "\n=== 사용자 / 접속 정보 ===\n"
+getent passwd lab-user
+id lab-user
+systemctl is-enabled sshd.service
+
+printf "\n=== SELinux 설정 ===\n"
+grep "^SELINUX=" /etc/selinux/config
+
+printf "\n=== 보안 강화 설정 파일 ===\n"
+cat /etc/sysctl.d/99-hardening.conf
+
+printf "\n=== 커널 패키지 ===\n"
+rpm -q kernel-core
+
+printf "\n=== kpatch 도구 ===\n"
+rpm -q kpatch kpatch-dnf
+
+printf "\n=== Userspace 기준 상태 ===\n"
+rpm -q openssl openssl-libs glibc
+rpm -q tree || true
+' </code></pre><div class="command-explain" id="explain-6"><div class="explain-title">필요할 때만 펼쳐보는 명령어 설명</div><dl><dt><code>podman run --rm ...</code></dt><dd>Hardened 이미지를 임시 컨테이너로 실행해 실제 파일과 패키지 구성을 확인한 뒤 자동 삭제합니다.</dd><dt><code>sh -lc '...'</code></dt><dd>여러 검증 명령을 하나의 shell 세션 안에서 순서대로 실행합니다.</dd><dt><code>set -e</code></dt><dd>검증 중 명령 하나가 실패하면 이후 검증을 계속하지 않고 즉시 종료합니다.</dd><dt><code>getent / id / systemctl is-enabled</code></dt><dd>lab-user 계정·그룹과 SSH 서비스의 활성화 설정이 이미지에 들어갔는지 확인합니다.</dd><dt><code>rpm -q ...</code></dt><dd>커널, kpatch 도구, Userspace 패키지의 실제 RPM 버전을 조회합니다.</dd></dl></div></div><div class="table-scroll"><table class="verify"><thead><tr><th>검증 항목</th><th>정상 기준</th><th>의미</th></tr></thead><tbody><tr><td>운영체제</td><td>RHEL 10.2</td><td>원본 이미지의 RHEL 10.2 버전 유지</td></tr><tr><td>이미지 식별 정보 (<code>marker</code>)</td><td>hardened / 1.0</td><td>기준 Userspace 상태</td></tr><tr><td>실습 사용자 계정 (<code>lab-user</code>)</td><td>wheel 포함</td><td>재부팅 후 접근 가능</td></tr><tr><td>SELinux 실행 모드 (<code>SELinux</code>)</td><td>enforcing</td><td>보안 정책 구성</td></tr><tr><td>보안 강화 설정 파일 (<code>sysctl</code>)</td><td>세 값 존재</td><td>hardening 설정이 image에 코드화</td></tr><tr><td>커널 패키지 (<code>kernel-core</code>)</td><td><code>6.12.0-211.16.1.el10_2</code></td><td>Source Image에 사전 고정된 kpatch 실습 대상 kernel이며 userspace update와 비교 기준</td></tr><tr><td>Userspace 변경 확인 (<code>tree</code>)</td><td>미설치 가능</td><td>뒤 userspace 변화 marker</td></tr></tbody></table></div>
+<h3>2-6. Quay Push</h3><div class="code-card" data-lang="shell"><div class="code-head"><span>Shell · :hardened push</span><div class="code-actions"><button aria-controls="explain-7" aria-expanded="false" class="explain-toggle" type="button">명령어 설명</button><button class="copy" type="button">복사</button></div></div><pre><code>sudo podman push "${HARDENED_IMAGE}"
+
+# 원격 레지스트리에서 실제로 pull 가능한지 확인
+sudo podman pull "${HARDENED_IMAGE}"
+
+# 같은 repository 안의 두 tag 구조 확인
+printf '저장소 : %s\n' "${LAB_REPO}"
+printf '태그   : hardened\n' </code></pre><div class="command-explain" id="explain-7"><div class="explain-title">필요할 때만 펼쳐보는 명령어 설명</div><dl><dt><code>podman push</code></dt><dd>로컬 Hardened 이미지를 참가자의 Quay repository에 업로드합니다.</dd><dt><code>podman pull</code></dt><dd>방금 올린 원격 tag를 다시 받을 수 있는지 확인해 registry 저장 상태까지 검증합니다.</dd><dt><code>printf ...</code></dt><dd>현재 사용하는 repository와 tag를 화면에 명확하게 표시합니다.</dd></dl></div></div><div class="table-scroll"><table class="verify"><thead><tr><th>검증 항목</th><th>정상 기준</th><th>의미</th></tr></thead><tbody><tr><td>Quay 이미지 Push (<code>push</code>)</td><td>manifest까지 정상 종료</td><td>Quay에 실제 image 업로드</td></tr><tr><td>Quay 이미지 Pull (<code>pull</code>)</td><td>원격 tag pull 성공</td><td>tag가 비어 있지 않음</td></tr><tr><td>Quay 태그 확인 (<code>Quay UI</code>)</td><td>Tags → hardened</td><td>repository와 tag를 구분</td></tr></tbody></table></div>
+</section><section id="s3"><div class="section-kicker">STEP 3</div><h2>RHEL 10.2 Image Mode로 전환</h2><p class="lead">Quay의 :hardened image를 실제 root OS로 설치하고, 파일 설정과 runtime 상태를 함께 검증합니다.</p>
+<h3>3-1. bootc private registry 인증</h3><div class="code-card" data-lang="shell"><div class="code-head"><span>Shell · /etc/ostree/auth.json</span><div class="code-actions"><button aria-controls="explain-8" aria-expanded="false" class="explain-toggle" type="button">명령어 설명</button><button class="copy" type="button">복사</button></div></div><pre><code># sudo podman login으로 생성한 root용 Quay 인증을 bootc에도 제공
+sudo mkdir -p /etc/ostree
+sudo cp /run/containers/0/auth.json /etc/ostree/auth.json
+sudo chmod 600 /etc/ostree/auth.json
+
+# 설치 전에 private image pull 자체가 되는지 분리 검증
+sudo podman pull "${HARDENED_IMAGE}"
+sudo test -s /etc/ostree/auth.json &amp;&amp; echo "bootc auth: OK"</code></pre><div class="command-explain" id="explain-8"><div class="explain-title">필요할 때만 펼쳐보는 명령어 설명</div><dl><dt><code>mkdir -p /etc/ostree</code></dt><dd>bootc가 private Quay 이미지를 가져올 때 사용할 인증 파일 위치를 준비합니다.</dd><dt><code>cp /run/containers/0/auth.json ...</code></dt><dd>root Podman의 Quay 인증 정보를 bootc가 읽는 인증 파일 위치로 복사합니다.</dd><dt><code>chmod 600</code></dt><dd>registry 인증 파일을 root만 읽고 쓸 수 있도록 권한을 제한합니다.</dd><dt><code>podman pull</code></dt><dd>파괴적인 OS 전환 전에 private Quay 이미지 자체를 정상적으로 받을 수 있는지 먼저 확인합니다.</dd><dt><code>test -s /etc/ostree/auth.json</code></dt><dd>인증 파일이 존재하면서 비어 있지 않은지 확인합니다.</dd></dl></div></div><div class="table-scroll"><table class="verify"><thead><tr><th>검증 항목</th><th>정상 기준</th><th>의미</th></tr></thead><tbody><tr><td>bootc 레지스트리 인증 파일 (<code>/etc/ostree/auth.json</code>)</td><td>non-empty</td><td>bootc가 private Quay pull 가능</td></tr><tr><td>Hardened 이미지 Pull (<code>podman pull</code>)</td><td>성공</td><td>registry 문제를 설치 전에 분리 확인</td></tr></tbody></table></div>
+<h3>3-2. OS 전환</h3>
+<div class="code-card" data-lang="shell"><div class="code-head"><span>Shell · system-reinstall-bootc</span><div class="code-actions"><span class="quick-tip-wrap"><button aria-label="핵심 명령 빠른 설명" class="quick-tip" type="button">ⓘ</button><span class="quick-tip-pop" role="tooltip"><span class="tip-item"><b><code>system-reinstall-bootc</code></b>현재 root OS를 지정한 bootc 이미지 기반 OS로 다시 설치합니다. 파괴적 작업이므로 대상 이미지와 인증을 먼저 검증합니다.</span></span></span><button aria-controls="explain-9" aria-expanded="false" class="explain-toggle" type="button">명령어 설명</button><button class="copy" type="button">복사</button></div></div><pre><code>sudo system-reinstall-bootc "${HARDENED_IMAGE}"</code></pre><div class="command-explain" id="explain-9"><div class="explain-title">필요할 때만 펼쳐보는 명령어 설명</div><dl><dt><code>system-reinstall-bootc</code></dt><dd>현재 Package Mode root OS를 지정한 bootc 이미지 기반 OS로 다시 설치합니다. 디스크의 root OS가 교체되는 파괴적 단계입니다.</dd><dt><code>${HARDENED_IMAGE}</code></dt><dd>Step 2에서 직접 만들고 Quay에 push한 Hardened 이미지를 새 root OS의 원본으로 사용합니다.</dd></dl></div></div>
+<div class="callout info"><strong>SSH authorized key 사용자 선택</strong><p>명령 실행 후 SSH authorized key 원본 사용자를 선택하는 TUI가 표시됩니다. <strong>화면 하단에 표시되는 조작 키 안내에 따라 lab-user를 선택하고 다음 단계로 진행합니다.</strong> 현재 검증한 실습 환경에서는 방향키로 이동한 뒤 Space로 [x] 선택, Enter로 진행할 수 있습니다. 선택 후 추가 확인 화면이 나오면 내용을 확인하고 계속 진행합니다.</p></div>
+<div class="code-card" data-lang="text"><div class="code-head"><span>화면 예시 · lab-user 선택</span></div><pre><code>Select which user's SSH authorized keys you want to
+import into the root user of the new bootc system:
+  [ ] ec2-user
+&gt; [x] lab-user
+  [ ] root
+
+예시 조작(화면에 표시되는 키 안내가 우선):
+↑ / ↓   : 사용자 이동
+Space   : 선택 / 선택 해제
+Enter   : 다음 단계 진행</code></pre></div>
+<div class="table-scroll"><table class="verify"><thead><tr><th>확인 항목</th><th>수행 방법</th><th>의미</th></tr></thead><tbody><tr><td>SSH Key 원본 사용자 선택 (<code>lab-user</code>)</td><td>TUI에 표시되는 조작 키 사용</td><td>현재 lab-user의 SSH authorized key를 새 bootc 시스템의 root 사용자로 가져올 원본으로 선택합니다.</td></tr><tr><td>사용자 선택 확인</td><td>현재 화면의 안내에 따라 진행</td><td>버전에 따라 조작 키나 추가 확인 화면이 다를 수 있으므로 화면 안내를 우선합니다.</td></tr><tr><td>OS 전환 준비 완료</td><td>명령이 오류 없이 종료될 때까지 대기</td><td>Package Mode root OS를 Hardened bootc image 기반 시스템으로 교체할 준비가 완료됩니다.</td></tr></tbody></table></div>
+<div class="callout warn"><strong>중요</strong><p>
+이 화면의 <code>lab-user</code> 선택은 새 시스템의 <code>lab-user</code> 계정을 생성하는 단계가 아닙니다.
+<code>lab-user</code> 계정 자체와 비밀번호/SSH 설정은 앞서 Hardened Image를 만들 때 이미 구성했습니다.
+여기서는 현재 시스템의 SSH authorized key를 새 bootc 시스템의 root 계정으로 가져올 원본 사용자를 선택합니다.
+</p></div>
+<div class="code-card" data-lang="shell"><div class="code-head"><span>Shell · 설치 완료 후 재부팅</span><div class="code-actions"><span class="quick-tip-wrap"><button aria-label="핵심 명령 빠른 설명" class="quick-tip" type="button">ⓘ</button><span class="quick-tip-pop" role="tooltip"><span class="tip-item"><b><code>system-reinstall-bootc</code></b>현재 root OS를 지정한 bootc 이미지 기반 OS로 다시 설치합니다. 파괴적 작업이므로 대상 이미지와 인증을 먼저 검증합니다.</span></span></span><button aria-controls="explain-10" aria-expanded="false" class="explain-toggle" type="button">명령어 설명</button><button class="copy" type="button">복사</button></div></div><pre><code># system-reinstall-bootc 설치 작업이 정상 종료된 뒤에만 실행합니다.
+sudo reboot</code></pre><div class="command-explain" id="explain-10"><div class="explain-title">필요할 때만 펼쳐보는 명령어 설명</div><dl><dt><code>sudo reboot</code></dt><dd>system-reinstall-bootc 작업이 정상 종료된 후 새 bootc deployment로 실제 부팅하기 위해 시스템을 재시작합니다.</dd></dl></div></div>
+<div class="callout danger"><strong>파괴적 작업</strong><p>현재 Package Mode root OS를 bootc 기반 OS로 교체합니다. SSH가 끊기고 host key가 바뀌는 것은 정상입니다.</p></div>
+<h3>3-3. SSH host key 갱신 후 재접속 — Windows / macOS / Linux</h3>
+<p><code>system-reinstall-bootc</code>로 root OS를 교체하면 새 RHEL 10.2 이미지에서 SSH host key가 새로 생성될 수 있습니다. 기존에 같은 hostname으로 접속한 적이 있는 PC는 이전 key와 새 key가 다르기 때문에 <code>REMOTE HOST IDENTIFICATION HAS CHANGED!</code> 경고를 표시하고 연결을 차단할 수 있습니다.</p>
+<div class="callout ok"><strong>운영체제와 관계없이 핵심은 동일합니다.</strong><p>
+OpenSSH의 <code>ssh-keygen -R &lt;hostname&gt;</code> 명령으로 해당 호스트의 이전 key만 <code>known_hosts</code>에서 제거한 뒤 다시 SSH로 접속합니다. Windows PowerShell, macOS Terminal, Linux shell에서 같은 방식으로 사용할 수 있습니다.
+</p></div>
+<h4>공통 방법 — 가장 권장</h4>
+<p>변수를 사용하지 않고 본인의 OpenTLC hostname을 명령에 직접 넣으면 운영체제별 문법 차이를 최소화할 수 있습니다.</p>
+<div class="code-card" data-lang="shell"><div class="code-head"><span>Windows / macOS / Linux · 공통</span><div class="code-actions"><span class="quick-tip-wrap"><button aria-label="핵심 명령 빠른 설명" class="quick-tip" type="button">ⓘ</button><span class="quick-tip-pop" role="tooltip"><span class="tip-item"><b><code>ssh-keygen -R</code></b>known_hosts에서 지정한 hostname의 기존 SSH host key만 제거합니다. OS 재설치 직후 새 host key를 다시 등록할 때 사용합니다.</span></span></span><button aria-controls="explain-11" aria-expanded="false" class="explain-toggle" type="button">명령어 설명</button><button class="copy" type="button">복사</button></div></div><pre><code># 예시 hostname입니다. 본인에게 할당된 OpenTLC hostname으로 변경하세요.
+ssh-keygen -R rhel.65gmj.sandbox1241.opentlc.com
+
+# 새 SSH host key를 확인하고 다시 접속합니다.
+ssh lab-user@rhel.65gmj.sandbox1241.opentlc.com</code></pre><div class="command-explain" id="explain-11"><div class="explain-title">필요할 때만 펼쳐보는 명령어 설명</div><dl><dt><code>ssh-keygen -R &lt;hostname&gt;</code></dt><dd>known_hosts에서 해당 hostname의 이전 SSH host key만 제거합니다.</dd><dt><code>ssh lab-user@&lt;hostname&gt;</code></dt><dd>OS 재설치 후 같은 hostname에 새 host key를 가진 RHEL 10.2 시스템으로 다시 접속합니다.</dd></dl></div></div>
+<div class="callout info"><strong>재접속 시 확인</strong><p>
+다시 접속하면 <code>The authenticity of host ... can't be established</code>와 새 fingerprint가 표시될 수 있습니다. 바로 앞 단계에서 본인이 의도적으로 OS를 재설치한 것이 맞는지 확인한 뒤 <code>yes</code>를 입력하여 새 host key를 등록합니다.
+</p></div>
+<details class="optional-details"><summary>OS별 변수 사용 예시 보기 — PowerShell / macOS·Linux·WSL / CMD</summary><div class="details-body"><h4>Windows PowerShell — 변수를 사용하는 경우</h4>
+<div class="code-card" data-lang="powershell"><div class="code-head"><span>Windows PowerShell</span><div class="code-actions"><span class="quick-tip-wrap"><button aria-label="핵심 명령 빠른 설명" class="quick-tip" type="button">ⓘ</button><span class="quick-tip-pop" role="tooltip"><span class="tip-item"><b><code>ssh-keygen -R</code></b>known_hosts에서 지정한 hostname의 기존 SSH host key만 제거합니다. OS 재설치 직후 새 host key를 다시 등록할 때 사용합니다.</span></span></span><button aria-controls="explain-12" aria-expanded="false" class="explain-toggle" type="button">명령어 설명</button><button class="copy" type="button">복사</button></div></div><pre><code>$LabHost = "rhel.65gmj.sandbox1241.opentlc.com"
+
+ssh-keygen -R $LabHost
+ssh "lab-user@$LabHost"</code></pre><div class="command-explain" id="explain-12"><div class="explain-title">필요할 때만 펼쳐보는 명령어 설명</div><dl><dt><code>$LabHost = ...</code></dt><dd>OpenTLC hostname을 PowerShell 변수에 저장해 뒤 명령에서 반복 입력하지 않도록 합니다.</dd><dt><code>ssh-keygen -R $LabHost</code></dt><dd>PowerShell 변수에 저장된 hostname의 이전 SSH host key를 제거합니다.</dd><dt><code>ssh "lab-user@$LabHost"</code></dt><dd>같은 hostname에 lab-user로 다시 접속합니다.</dd></dl></div></div>
+<h4>macOS / Linux / WSL — Bash 또는 Zsh</h4>
+<div class="code-card" data-lang="shell"><div class="code-head"><span>macOS Terminal · Linux · WSL</span><div class="code-actions"><span class="quick-tip-wrap"><button aria-label="핵심 명령 빠른 설명" class="quick-tip" type="button">ⓘ</button><span class="quick-tip-pop" role="tooltip"><span class="tip-item"><b><code>ssh-keygen -R</code></b>known_hosts에서 지정한 hostname의 기존 SSH host key만 제거합니다. OS 재설치 직후 새 host key를 다시 등록할 때 사용합니다.</span></span></span><button aria-controls="explain-13" aria-expanded="false" class="explain-toggle" type="button">명령어 설명</button><button class="copy" type="button">복사</button></div></div><pre><code>LAB_HOST="rhel.65gmj.sandbox1241.opentlc.com"
+
+ssh-keygen -R "${LAB_HOST}"
+ssh "lab-user@${LAB_HOST}"</code></pre><div class="command-explain" id="explain-13"><div class="explain-title">필요할 때만 펼쳐보는 명령어 설명</div><dl><dt><code>LAB_HOST="..."</code></dt><dd>hostname을 Bash/Zsh 셸 변수로 저장합니다.</dd><dt><code>ssh-keygen -R "${LAB_HOST}"</code></dt><dd>해당 hostname의 이전 SSH host key를 known_hosts에서 제거합니다.</dd><dt><code>ssh "lab-user@${LAB_HOST}"</code></dt><dd>새 bootc 시스템에 lab-user로 다시 접속합니다.</dd></dl></div></div>
+<h4>Windows Command Prompt(CMD) — 변수를 사용하는 경우</h4>
+<div class="code-card" data-lang="cmd"><div class="code-head"><span>Windows CMD</span><div class="code-actions"><span class="quick-tip-wrap"><button aria-label="핵심 명령 빠른 설명" class="quick-tip" type="button">ⓘ</button><span class="quick-tip-pop" role="tooltip"><span class="tip-item"><b><code>ssh-keygen -R</code></b>known_hosts에서 지정한 hostname의 기존 SSH host key만 제거합니다. OS 재설치 직후 새 host key를 다시 등록할 때 사용합니다.</span></span></span><button aria-controls="explain-14" aria-expanded="false" class="explain-toggle" type="button">명령어 설명</button><button class="copy" type="button">복사</button></div></div><pre><code>set LAB_HOST=rhel.65gmj.sandbox1241.opentlc.com
+
+ssh-keygen -R %LAB_HOST%
+ssh lab-user@%LAB_HOST%</code></pre><div class="command-explain" id="explain-14"><div class="explain-title">필요할 때만 펼쳐보는 명령어 설명</div><dl><dt><code>set LAB_HOST=...</code></dt><dd>hostname을 Windows CMD 환경 변수로 저장합니다.</dd><dt><code>ssh-keygen -R %LAB_HOST%</code></dt><dd>해당 hostname의 이전 SSH host key를 제거합니다.</dd><dt><code>ssh lab-user@%LAB_HOST%</code></dt><dd>새 bootc 시스템에 lab-user로 다시 접속합니다.</dd></dl></div></div>
+</div></details>
+<div class="table-scroll"><table class="verify"><thead><tr><th>확인 지점</th><th>정상 기준</th><th>의미</th></tr></thead><tbody>
+<tr><td>SSH Host Key 변경 경고 (<code>REMOTE HOST IDENTIFICATION HAS CHANGED!</code>)</td><td>OS 재설치 직후 발생 가능</td><td>같은 hostname에 대해 로컬 PC가 기억한 이전 SSH key와 새 OS의 SSH key가 달라졌다는 뜻입니다.</td></tr>
+<tr><td>이전 SSH Host Key 삭제 (<code>ssh-keygen -R &lt;hostname&gt;</code>)</td><td><code>Host ... found</code>, <code>known_hosts updated</code>와 비슷한 메시지</td><td>해당 hostname의 이전 key만 제거되었습니다.</td></tr>
+<tr><td>SSH 재접속 (<code>ssh</code>)</td><td><code>The authenticity of host ... can't be established</code>와 새 fingerprint 표시</td><td>새 host key가 아직 로컬에 등록되지 않아 최초 접속처럼 다시 확인하는 단계입니다.</td></tr>
+<tr><td>새 SSH Host Key 등록 (<code>yes</code>)</td><td><code>Permanently added ... to the list of known hosts</code></td><td>새 SSH host key가 <code>known_hosts</code>에 저장됩니다.</td></tr>
+<tr><td>lab-user 로그인 (<code>lab-user</code>)</td><td>Step 2에서 설정한 비밀번호 또는 준비된 SSH 인증으로 로그인 성공</td><td>Hardened Image의 사용자와 SSH 설정이 실제 RHEL 10.2 Image Mode 시스템에서 정상 동작함을 확인합니다.</td></tr>
+</tbody></table></div>
+<div class="callout danger"><strong>OS 재설치 없이 갑자기 경고가 나온 경우</strong><p>
+본인이 OS 재설치, VM 재프로비저닝 또는 호스트 교체를 수행하지 않았는데 <code>REMOTE HOST IDENTIFICATION HAS CHANGED!</code>가 갑자기 발생했다면 바로 이전 key를 삭제하지 않습니다. 먼저 접속 대상 hostname/IP가 맞는지 확인합니다. 이번 실습에서는 바로 앞 단계에서 <code>system-reinstall-bootc</code>를 수행했기 때문에 host key 변경이 예상되는 상황입니다.
+</p></div>
+<p class="mini">경고에 <code>Offending ... key in ...known_hosts:18</code>처럼 줄 번호가 표시되어도 해당 줄을 직접 편집하기보다 <code>ssh-keygen -R &lt;hostname&gt;</code>을 사용하는 편이 간단합니다.</p><h3>3-4. 재접속 후 RHEL 10.2 Image Mode 검증</h3><p>위 단계에서 로컬 PC의 이전 SSH host key를 정리하고 lab-user로 다시 접속한 세션에서 아래 검증을 수행합니다.</p><div class="code-card" data-lang="shell"><div class="code-head"><span>Shell · RHEL 10.2 Image Mode 검증</span><div class="code-actions"><span class="quick-tip-wrap"><button aria-label="핵심 명령 빠른 설명" class="quick-tip" type="button">ⓘ</button><span class="quick-tip-pop" role="tooltip"><span class="tip-item"><b><code>bootc status --verbose</code></b>현재 부팅된 이미지, staged deployment, image reference와 digest 등 bootc 상태를 자세히 확인합니다.</span></span></span><button aria-controls="explain-15" aria-expanded="false" class="explain-toggle" type="button">명령어 설명</button><button class="copy" type="button">복사</button></div></div><pre><code>cat /etc/redhat-release
+sudo bootc status --verbose
+cat /usr/share/lab-image-stage
+cat /usr/share/lab-userspace-generation
+
+printf '\n=== 실행 중 보안 상태 ===\n'
+sestatus | grep 'Current mode'
+sysctl net.ipv4.conf.all.rp_filter
+sysctl net.ipv4.tcp_syncookies
+sysctl kernel.unprivileged_bpf_disabled
+
+printf '\n=== 사용자 / 접속 정보 ===\n'
+id lab-user
+systemctl is-active sshd.service
+
+printf '\n=== 커널 ===\n'
+uname -r
+rpm -q kernel-core</code></pre><div class="command-explain" id="explain-15"><div class="explain-title">필요할 때만 펼쳐보는 명령어 설명</div><dl><dt><code>bootc status --verbose</code></dt><dd>현재 어떤 bootc 이미지와 digest에서 부팅되었는지 상세 상태를 확인합니다.</dd><dt><code>cat /usr/share/lab-image-stage</code></dt><dd>현재 부팅된 이미지가 hardened 단계인지 실습 marker로 확인합니다.</dd><dt><code>sestatus / sysctl</code></dt><dd>SELinux와 sysctl 값이 파일에만 존재하는 것이 아니라 실제 runtime에 적용되었는지 확인합니다.</dd><dt><code>id lab-user / systemctl is-active sshd</code></dt><dd>재설치 후에도 사용자와 SSH 서비스가 실제로 정상 동작하는지 확인합니다.</dd><dt><code>uname -r / rpm -q kernel-core</code></dt><dd>실행 중인 커널과 설치된 커널 패키지가 실습 기준 버전과 일치하는지 확인합니다.</dd></dl></div></div><div class="table-scroll"><table class="verify"><thead><tr><th>검증 항목</th><th>정상 기준</th><th>의미</th></tr></thead><tbody><tr><td>운영체제 버전 (<code>/etc/redhat-release</code>)</td><td>RHEL 10.2</td><td>OS 전환 완료</td></tr><tr><td>현재 bootc 이미지 상태 (<code>bootc status</code>)</td><td>...:hardened</td><td>Quay hardened image에서 boot</td></tr><tr><td>SELinux 실행 상태 (<code>sestatus</code>)</td><td>enforcing</td><td>실행 중 SELinux</td></tr><tr><td>커널 보안 설정 적용 상태 (<code>sysctl</code>)</td><td>1/1/1</td><td>설정 파일뿐 아니라 running kernel에도 적용</td></tr><tr><td>실행 중인 커널 (<code>uname -r</code>)</td><td><code>6.12.0-211.16.1.el10_2.x86_64</code></td><td>실제 kpatch package가 제공되는 kernel로 정상 부팅되었으며 kpatch/soft reboot 비교 기준</td></tr></tbody></table></div><div class="callout ok"><strong>설정 파일 vs Runtime</strong><p>/etc/sysctl.d 파일은 “정의”를, sysctl 명령은 “현재 kernel에 적용된 값”을 검증합니다.</p></div>
+<h3>3-5. 재부팅 후 변수 + Quay 인증 재준비</h3><div class="callout info"><strong>왜 변수를 다시 설정하나요?</strong><p><code>export</code>로 만든 shell 변수는 reboot/SSH 재접속 후 유지되지 않습니다. 따라서 Step 5의 build와 Step 6의 <code>bootc switch</code> 전에 이미지 경로 변수를 다시 구성합니다.</p></div><div class="code-card" data-lang="shell"><div class="code-head"><span>Shell · 변수 재설정 + Image Mode host Quay 인증</span><div class="code-actions"><button aria-controls="explain-16" aria-expanded="false" class="explain-toggle" type="button">명령어 설명</button><button class="copy" type="button">복사</button></div></div><pre><code># reboot/재접속 후 Quay에 다시 로그인합니다.
+sudo podman login quay.io
+
+# 방금 로그인한 Quay Username을 자동으로 가져와 이미지 경로를 다시 구성합니다.
+export QUAY_USER="$(sudo podman login --get-login quay.io)"
+export LAB_REPO="quay.io/${QUAY_USER}/rhel10-cve-lab"
+export HARDENED_IMAGE="${LAB_REPO}:hardened"
+export USERSPACE_IMAGE="${LAB_REPO}:userspace-update"
+
+printf 'Hardened 이미지 : %s\n' "${HARDENED_IMAGE}"
+printf '업데이트 이미지 : %s\n' "${USERSPACE_IMAGE}"
+
+# 이후 bootc switch에서 private Quay 이미지를 pull할 수 있도록 인증을 다시 준비합니다.
+sudo mkdir -p /etc/ostree
+sudo cp /run/containers/0/auth.json /etc/ostree/auth.json
+sudo chmod 600 /etc/ostree/auth.json
+sudo test -s /etc/ostree/auth.json &amp;&amp; echo "bootc auth: OK"</code></pre><div class="command-explain" id="explain-16"><div class="explain-title">필요할 때만 펼쳐보는 명령어 설명</div><dl><dt><code>podman login --get-login quay.io</code></dt><dd>재부팅 후 Quay에 다시 로그인한 뒤 로그인된 Username을 자동으로 가져와 이후 build/switch용 경로를 다시 만듭니다.</dd><dt><code>HARDENED_IMAGE / USERSPACE_IMAGE</code></dt><dd>Step 5와 Step 6에서 사용할 두 tag 경로를 다시 구성합니다.</dd><dt><code>podman login quay.io</code></dt><dd>새 Image Mode host에서 Quay 인증을 다시 생성합니다.</dd><dt><code>/etc/ostree/auth.json</code></dt><dd>bootc가 private registry 이미지를 pull할 수 있도록 인증 파일을 준비합니다.</dd></dl></div></div>
+</section><section id="s4"><div class="section-kicker">STEP 4</div><h2>Kernel CVE 대응 — kpatch</h2><p class="lead">Source Image에 사전 구성된 <code>workshop-rhel10</code> Repository를 사용해 RHSM 등록 없이 실제 kernel live patch를 적용합니다. 기본 실습에서는 Repository/RHSM 상태에 따른 분기 없이 동일한 경로로 진행합니다.</p>
+<div class="callout warn"><strong>지원 조건</strong><p>RHEL 10 kpatch는 RHEL 10.2부터 지원됩니다. 이번 실습은 <code>kernel-6.12.0-211.16.1.el10_2</code>로 고정된 Source Image와 Workshop Repository에서 제공하는 <code>kpatch-patch-6_12_0-211_16_1-1-5.el10_2</code>를 사용해 <code>[enabled]</code> live patch module을 확인합니다. 모든 CVE가 live patch 대상은 아닙니다.</p></div>
+<div class="callout info"><strong>기본 실습의 Repository 구성</strong><p><code>workshop-rhel10</code> Repository 설정은 실습용 Source Image에 미리 포함되어 있습니다. 따라서 Step 1~6에서는 개인 Red Hat 계정이나 RHSM 등록 없이 kpatch와 Userspace Update를 진행합니다. RHSM 등록은 Step 7 Optional 실습에서만 수행합니다.</p></div>
+
+<h3>4-1. kpatch 적용 전 사전 검증</h3>
+<p>실제 patch 적용 전에 실행 중인 kernel, kpatch 도구, transient DNF 지원 여부와 Workshop Repository를 확인합니다. 이 단계에서 RHSM 미등록 메시지가 표시되어도 기본 실습에는 영향을 주지 않습니다.</p>
+<div class="code-card" data-lang="shell">
+<div class="code-head">
+<span>Shell · kpatch 사전 검증</span>
+<div class="code-actions"><span class="quick-tip-wrap"><button aria-label="핵심 명령 빠른 설명" class="quick-tip" type="button">ⓘ</button><span class="quick-tip-pop" role="tooltip"><span class="tip-item"><b><code>dnf kpatch status</code></b>kpatch-dnf가 관리하는 live patch 설정과 현재 사용 가능한 patch를 확인합니다.</span></span></span><button aria-controls="explain-17" aria-expanded="false" class="explain-toggle" type="button">명령어 설명</button><button class="copy" type="button">복사</button></div></div>
+<pre><code>printf '=== 실행 중인 커널 ===\n'
+uname -r
+
+printf '\n=== 설치된 커널 패키지 ===\n'
+rpm -q kernel-core
+
+printf '\n=== kpatch 도구 ===\n'
+rpm -q kpatch kpatch-dnf
+
+printf '\n=== 임시 DNF 지원 여부 ===\n'
+dnf --help | grep -i transient
+
+printf '\n=== RHSM 등록 정보 (미등록이어도 정상) ===\n'
+sudo subscription-manager identity || true
+
+printf '\n=== 활성화된 저장소 ===\n'
+sudo dnf repolist
+
+printf '\n=== kpatch 상태 ===\n'
+sudo dnf kpatch status</code></pre>
+<div class="command-explain" id="explain-17"><div class="explain-title">필요할 때만 펼쳐보는 명령어 설명</div><dl>
+<dt><code>uname -r</code></dt><dd>현재 실제 실행 중인 kernel이 kpatch 실습 대상 kernel인지 확인합니다.</dd>
+<dt><code>rpm -q kernel-core</code></dt><dd>설치된 kernel-core 패키지가 running kernel과 일치하는지 확인합니다.</dd>
+<dt><code>rpm -q kpatch kpatch-dnf</code></dt><dd>kpatch 실행 도구와 DNF 플러그인이 설치되어 있는지 확인합니다.</dd>
+<dt><code>dnf --help | grep -i transient</code></dt><dd>Image Mode의 영구 OS image를 변경하지 않고 현재 boot에서만 DNF transaction을 수행할 수 있는지 확인합니다.</dd>
+<dt><code>subscription-manager identity</code></dt><dd>현재 RHSM 등록 상태를 참고용으로 확인합니다. Step 1~6에서는 미등록이어도 정상입니다.</dd>
+<dt><code>dnf repolist</code></dt><dd>Source Image에 사전 구성된 <code>workshop-rhel10</code> Repository가 활성화되어 있는지 확인합니다.</dd>
+<dt><code>dnf kpatch status</code></dt><dd>kpatch 관리 설정과 Workshop Repository에서 제공되는 <code>Available patches</code>를 확인합니다.</dd>
+</dl></div></div>
+
+<div class="callout warn"><strong>RHSM 미등록 메시지는 여기서는 무시해도 됩니다.</strong><p>아래 메시지는 현재 시스템이 Red Hat Subscription Management에 등록되지 않았다는 뜻이지만, <strong>Step 1~6의 실패를 의미하지 않습니다.</strong></p>
+<div class="code-card" data-lang="text"><div class="code-head"><span>정상적으로 표시될 수 있는 메시지</span></div><pre><code>Unable to read consumer identity
+
+This system is not registered with an entitlement server.</code></pre></div>
+<p><code>dnf repolist</code>에 <code>workshop-rhel10</code>이 표시되고, <code>dnf kpatch status</code>의 <code>Available patches</code>에 <code>kpatch-patch-6_12_0-211_16_1-1-5.el10_2.x86_64</code>가 보이면 정상입니다. 개인 Red Hat 계정 등록은 Step 7 Optional 실습에서 진행합니다.</p></div>
+
+<div class="table-scroll">
+<table class="verify compact-verify"><thead><tr><th>확인 항목</th><th>정상 기준</th></tr></thead><tbody>
+<tr><td>실행 중인 커널 (<code>uname -r</code>)</td><td>6.12.0-211.16.1.el10_2.x86_64</td></tr>
+<tr><td>커널 패키지 (<code>kernel-core</code>)</td><td>실행 중인 커널과 동일한 6.12.0-211.16.1.el10_2</td></tr>
+<tr><td>kpatch 도구 설치 상태 (<code>kpatch / kpatch-dnf</code>)</td><td>두 RPM version 모두 출력</td></tr>
+<tr><td>Transient DNF 지원 여부 (<code>dnf --help</code>)</td><td><code>--transient</code> 옵션 확인</td></tr>
+<tr><td>RHSM 등록 상태</td><td>미등록이어도 정상 · 기본 실습에서는 RHSM 불필요</td></tr>
+<tr><td>활성화된 저장소 (<code>dnf repolist</code>)</td><td><code>workshop-rhel10</code> / RHEL 10.2 Workshop Repository</td></tr>
+<tr><td>kpatch 상태 (<code>dnf kpatch status</code>)</td><td><code>Available patches: kpatch-patch-6_12_0-211_16_1-1-5.el10_2.x86_64</code> 확인</td></tr>
+</tbody></table>
+</div>
+<div class="callout ok"><strong>4-1 성공 기준</strong><p>RHSM이 미등록이어도 <code>workshop-rhel10</code> Repository와 대상 <code>kpatch-patch</code>가 확인되면 준비 완료입니다. 별도 RHSM 등록 없이 바로 4-2로 진행합니다.</p></div>
+
+<h3>4-2. 실제 live patch 적용</h3>
+<div class="callout info"><strong>Workshop Repository에서 바로 적용합니다.</strong><p>Repository/RHSM 분기 없이 모든 참가자가 같은 명령으로 실제 live patch를 적용합니다.</p></div>
+<div class="code-card" data-lang="shell"><div class="code-head"><span>Shell · dnf --transient + kpatch auto</span><div class="code-actions"><span class="quick-tip-wrap"><button aria-label="핵심 명령 빠른 설명" class="quick-tip" type="button">ⓘ</button><span class="quick-tip-pop" role="tooltip"><span class="tip-item"><b><code>dnf --transient kpatch auto</code></b>Image Mode의 영구 OS 이미지는 바꾸지 않고 현재 boot 세션에서 kpatch DNF transaction을 수행합니다.</span><span class="tip-item"><b><code>dnf kpatch status</code></b>kpatch-dnf가 관리하는 live patch stream/filter 상태를 확인합니다.</span><span class="tip-item"><b><code>kpatch list</code></b>현재 kernel에 설치·로드된 live patch module과 활성화([enabled]) 상태를 확인합니다.</span></span></span><button aria-controls="explain-21" aria-expanded="false" class="explain-toggle" type="button">명령어 설명</button><button class="copy" type="button">복사</button></div></div><pre><code># 현재 running kernel용 kpatch package가 Workshop Repository에 제공되는지 확인합니다.
+sudo dnf repoquery --showduplicates \
+  'kpatch-patch-6_12_0-211_16_1*'
+
+# 영구 OS image를 변경하지 않고 현재 부팅 세션에서 live patch를 적용합니다.
+sudo dnf --transient kpatch auto
+
+printf '\n=== kpatch 관리 설정 ===\n'
+sudo dnf kpatch status
+
+printf '\n=== 설치된 kpatch 패키지 ===\n'
+rpm -qa | grep '^kpatch' | sort
+
+printf '\n=== 로드 / 설치된 패치 모듈 ===\n'
+sudo kpatch list
+
+printf '\n=== 실행 중인 커널 ===\n'
+uname -r</code></pre>
+<div class="command-explain" id="explain-21"><div class="explain-title">필요할 때만 펼쳐보는 명령어 설명</div><dl>
+<dt><code>dnf repoquery --showduplicates ...</code></dt><dd>Workshop Repository에서 현재 running kernel에 대응하는 kpatch package를 확인합니다.</dd>
+<dt><code>dnf --transient kpatch auto</code></dt><dd>영구 bootc image 변경 없이 현재 boot의 transient overlay에서 kpatch를 적용합니다.</dd>
+<dt><code>dnf kpatch status</code></dt><dd>kpatch 자동 업데이트/filter 설정과 사용 가능한 patch를 확인합니다.</dd>
+<dt><code>rpm -qa | grep '^kpatch'</code></dt><dd>실제 kpatch-patch RPM 설치 여부를 확인합니다.</dd>
+<dt><code>kpatch list</code></dt><dd>live patch module이 <code>[enabled]</code> 상태인지 확인합니다.</dd>
+<dt><code>uname -r</code></dt><dd>live patch 전후 running kernel version이 그대로인지 확인합니다.</dd>
+</dl></div></div>
+<div class="table-scroll"><table class="verify"><thead><tr><th>검증 항목</th><th>정상 기준</th><th>의미</th></tr></thead><tbody>
+<tr><td>Workshop Repository의 kpatch 패키지 (<code>dnf repoquery</code>)</td><td>kpatch-patch-6_12_0-211_16_1-1-5.el10_2 확인</td><td>실습 대상 live patch package 제공</td></tr>
+<tr><td>kpatch Live Patch 적용 (<code>dnf --transient kpatch auto</code>)</td><td>오류 없이 완료</td><td>현재 boot 세션에서 live patch 적용</td></tr>
+<tr><td>설치된 kpatch 패키지 (<code>rpm -qa</code>)</td><td>kpatch-patch-6_12_0-211_16_1-1-5.el10_2 설치</td><td>delivery RPM 설치</td></tr>
+<tr><td>로드된 Live Patch 모듈 (<code>kpatch list</code>)</td><td>kpatch_6_12_0_211_16_1_1_5 [enabled]</td><td>실제 live patch module 활성화</td></tr>
+<tr><td>실행 중인 커널 (<code>uname -r</code>)</td><td>6.12.0-211.16.1.el10_2.x86_64 유지</td><td>kernel 교체/reboot 없이 patch 적용</td></tr>
+</tbody></table></div>
+<div class="callout ok"><strong>Step 4 성공 기준</strong><p><code>kpatch_6_12_0_211_16_1_1_5 [enabled]</code>가 확인되고 <code>uname -r</code>이 <code>6.12.0-211.16.1.el10_2.x86_64</code>로 그대로이면 성공입니다. 이제 Step 5 Userspace Update로 진행합니다.</p></div>
+</section><section id="s5"><div class="section-kicker">STEP 5</div><h2>Userspace Update Image 직접 생성</h2><p class="lead">새 repository 대신 같은 rhel10-cve-lab repository 안에 :userspace-update tag를 추가합니다.</p>
+<h3>5-1. 변경 전 상태 기록</h3><div class="code-card" data-lang="shell"><div class="code-head"><span>Shell · userspace baseline</span><div class="code-actions"><button aria-controls="explain-22" aria-expanded="false" class="explain-toggle" type="button">명령어 설명</button><button class="copy" type="button">복사</button></div></div><pre><code>mkdir -p ~/rhel10-cve-lab-state
+
+rpm -q openssl openssl-libs glibc \
+  | tee ~/rhel10-cve-lab-state/userspace-before.txt
+
+rpm -q kernel-core \
+  | tee ~/rhel10-cve-lab-state/kernel-package-before.txt
+
+uname -r \
+  | tee ~/rhel10-cve-lab-state/running-kernel-before.txt
+
+rpm -q tree || echo 'tree: NOT INSTALLED'
+cat /usr/share/lab-userspace-generation</code></pre><div class="command-explain" id="explain-22"><div class="explain-title">필요할 때만 펼쳐보는 명령어 설명</div><dl><dt><code>mkdir -p ~/rhel10-cve-lab-state</code></dt><dd>업데이트 전 상태를 파일로 보관할 작업 디렉터리를 만듭니다.</dd><dt><code>rpm -q ... | tee ...</code></dt><dd>OpenSSL/glibc와 kernel-core 버전을 화면에 보여주는 동시에 비교용 파일에도 저장합니다.</dd><dt><code>uname -r | tee ...</code></dt><dd>soft reboot 전 running kernel 버전을 저장해 이후 동일한지 비교합니다.</dd><dt><code>rpm -q tree</code></dt><dd>업데이트 이미지에서 새로 추가될 userspace marker 패키지가 현재는 없는지 확인합니다.</dd><dt><code>cat ...lab-userspace-generation</code></dt><dd>현재 userspace generation이 baseline인 1.0인지 확인합니다.</dd></dl></div></div><div class="table-scroll"><table class="verify"><thead><tr><th>검증 항목</th><th>정상 기준</th><th>의미</th></tr></thead><tbody><tr><td>Userspace 패키지 버전 (<code>OpenSSL / glibc</code>)</td><td>현재 EVR 기록</td><td>보안 업데이트 버전 비교 기준</td></tr><tr><td>Userspace 변경 확인 (<code>tree</code>)</td><td>NOT INSTALLED 기대</td><td>항상 보이는 userspace 변화 marker</td></tr><tr><td>Userspace 이미지 세대 (<code>generation</code>)</td><td>1.0</td><td>hardened baseline</td></tr><tr><td>실행 중인 커널 (<code>uname -r</code>)</td><td>파일 저장</td><td>soft reboot 후 동일성 비교</td></tr></tbody></table></div>
+<h3>5-2. 같은 repository의 두 번째 tag 작성</h3><div class="code-card" data-lang="containerfile"><div class="code-head"><span>Containerfile · :userspace-update</span><div class="code-actions"><button aria-controls="explain-23" aria-expanded="false" class="explain-toggle" type="button">명령어 설명</button><button class="copy" type="button">복사</button></div></div><pre><code>cat &lt;&lt;'EOF' &gt; Containerfile.userspace
+ARG HARDENED_IMAGE
+FROM ${HARDENED_IMAGE}
+
+# OpenSSL / glibc에 실제 업데이트가 있으면 반영합니다.
+# tree는 업데이트가 없는 날에도 userspace 변경을 눈으로 확인하기 위한 marker입니다.
+RUN dnf update -y \
+    openssl \
+    openssl-libs \
+    glibc \
+    &amp;&amp; dnf install -y tree \
+    &amp;&amp; dnf clean all
+
+RUN printf '%s\n' 'userspace-update' \
+      &gt; /usr/share/lab-image-stage \
+    &amp;&amp; printf '%s\n' '2.0' \
+      &gt; /usr/share/lab-userspace-generation
+EOF</code></pre><div class="command-explain" id="explain-23"><div class="explain-title">필요할 때만 펼쳐보는 명령어 설명</div><dl><dt><code>ARG HARDENED_IMAGE / FROM ${HARDENED_IMAGE}</code></dt><dd>Step 2의 Hardened 이미지를 그대로 부모 이미지로 사용해 두 번째 OS 이미지를 만듭니다.</dd><dt><code>dnf update openssl ... glibc</code></dt><dd>업데이트가 존재하면 주요 Userspace 패키지의 새 버전을 이미지에 반영합니다.</dd><dt><code>dnf install tree</code></dt><dd>패키지 업데이트가 없는 날에도 Userspace 이미지가 변경되었음을 확실히 보여주는 marker를 추가합니다.</dd><dt><code>lab-image-stage / generation 2.0</code></dt><dd>새 이미지가 userspace-update 단계임을 파일 값으로 명확하게 표시합니다.</dd></dl></div></div><div class="callout info"><strong>tree의 목적</strong><p>tree는 CVE 패치를 보여주기 위한 패키지가 아니라, OpenSSL/glibc가 이미 최신인 날에도 userspace가 실제 변경됐음을 항상 확인하기 위한 marker입니다.</p></div>
+<h3>5-3. Build + Push</h3><div class="code-card" data-lang="shell"><div class="code-head"><span>Shell · :userspace-update build/push</span><div class="code-actions"><button aria-controls="explain-24" aria-expanded="false" class="explain-toggle" type="button">명령어 설명</button><button class="copy" type="button">복사</button></div></div><pre><code># Build만 먼저 수행합니다.
+sudo podman build \
+  --build-arg HARDENED_IMAGE="${HARDENED_IMAGE}" \
+  -t "${USERSPACE_IMAGE}" \
+  -f Containerfile.userspace .
+
+# Local tag가 만들어졌는지 먼저 확인합니다.
+sudo podman image exists "${USERSPACE_IMAGE}" \
+  &amp;&amp; echo "Local userspace-update image: OK"
+
+sudo podman images "${LAB_REPO}"
+
+# 위 검증이 성공한 뒤에만 push합니다.
+sudo podman push "${USERSPACE_IMAGE}"
+
+# Remote tag를 다시 pull해 원격 manifest 접근까지 확인합니다.
+sudo podman pull "${USERSPACE_IMAGE}"</code></pre><div class="command-explain" id="explain-24"><div class="explain-title">필요할 때만 펼쳐보는 명령어 설명</div><dl><dt><code>podman build --build-arg HARDENED_IMAGE=...</code></dt><dd>Hardened 이미지를 부모로 지정해 Userspace Update 이미지를 빌드합니다.</dd><dt><code>-t "${USERSPACE_IMAGE}"</code></dt><dd>같은 Quay repository의 userspace-update tag를 부여합니다.</dd><dt><code>podman image exists / podman images</code></dt><dd>로컬 build 결과와 두 tag가 실제로 존재하는지 확인합니다.</dd><dt><code>podman push / podman pull</code></dt><dd>새 tag를 Quay에 업로드하고 원격에서 다시 받을 수 있는지 검증합니다.</dd></dl></div></div>
+<h3>5-4. soft reboot 전 Kernel 버전 확인</h3>
+<p>
+  다음 단계에서는 <strong>Kernel은 그대로 유지한 채 Userspace만 새 이미지로 변경하는 soft reboot</strong>를 수행합니다.
+  따라서 먼저 <code>:hardened</code> 이미지와 새로 만든 <code>:userspace-update</code> 이미지에 포함된
+  <strong>Kernel 버전이 서로 같은지 확인</strong>해야 합니다.
+</p>
+<div class="callout info">
+<strong>왜 확인하나요?</strong>
+<p>
+    soft reboot는 현재 실행 중인 Kernel을 다시 부팅하지 않고 Userspace만 새로 시작하는 방식입니다.
+    따라서 두 이미지의 Kernel 버전이 같아야 다음 단계의 soft reboot를 진행할 수 있습니다.
+    이번 실습에서는 두 이미지 모두 <code>6.12.0-211.16.1.el10_2</code> Kernel을 유지해야 합니다.
+  </p>
+</div>
+<div class="code-card" data-lang="shell">
+<div class="code-head">
+<span>Shell · 두 이미지의 Kernel / Userspace 비교</span>
+<div class="code-actions"><button aria-controls="explain-25" aria-expanded="false" class="explain-toggle" type="button">명령어 설명</button><button class="copy" type="button">복사</button></div></div>
+<pre><code>printf '=== hardened 이미지 : kernel-core ===\n'
+sudo podman run --rm "${HARDENED_IMAGE}" rpm -q kernel-core
+
+printf '\n=== userspace-update 이미지 : kernel-core ===\n'
+sudo podman run --rm "${USERSPACE_IMAGE}" rpm -q kernel-core
+
+printf '\n=== hardened 이미지 : Userspace ===\n'
+sudo podman run --rm "${HARDENED_IMAGE}" sh -lc \
+  'rpm -q openssl openssl-libs glibc; rpm -q tree || true; cat /usr/share/lab-userspace-generation'
+
+printf '\n=== userspace-update 이미지 : Userspace ===\n'
+sudo podman run --rm "${USERSPACE_IMAGE}" sh -lc \
+  'rpm -q openssl openssl-libs glibc tree; cat /usr/share/lab-userspace-generation'</code></pre><div class="command-explain" id="explain-25"><div class="explain-title">필요할 때만 펼쳐보는 명령어 설명</div><dl><dt><code>podman run ... rpm -q kernel-core</code></dt><dd>Hardened 이미지와 Userspace Update 이미지에 포함된 커널 패키지 버전을 각각 확인합니다.</dd><dt><code>rpm -q openssl ... glibc</code></dt><dd>Userspace 패키지 버전이 새 이미지에서 어떻게 달라졌는지 비교합니다.</dd><dt><code>rpm -q tree</code></dt><dd>Hardened 이미지에는 없고 Userspace Update 이미지에는 tree가 존재하는지 확인합니다.</dd><dt><code>lab-userspace-generation</code></dt><dd>generation 값이 1.0에서 2.0으로 바뀌었는지 확인합니다.</dd></dl></div>
+</div>
+<div class="table-scroll">
+<table class="verify">
+<thead>
+<tr>
+<th>확인 항목</th>
+<th>정상 기준</th>
+<th>의미</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>커널 패키지 (<code>kernel-core</code>)</td>
+<td>두 이미지 모두 <code>6.12.0-211.16.1.el10_2</code>로 동일</td>
+<td>Kernel 변경 없이 Userspace만 업데이트할 수 있는 상태입니다.</td>
+</tr>
+<tr>
+<td>Userspace 패키지 버전 (<code>OpenSSL / glibc</code>)</td>
+<td>업데이트가 있다면 <code>:userspace-update</code>에서 버전 상승</td>
+<td>Userspace 패키지 업데이트가 새 이미지에 반영되었습니다.</td>
+</tr>
+<tr>
+<td>Userspace 변경 확인 (<code>tree</code>)</td>
+<td><code>:hardened</code>에는 없고 <code>:userspace-update</code>에는 설치</td>
+<td>실제 Userspace 변경이 발생했음을 쉽게 확인하기 위한 marker입니다.</td>
+</tr>
+<tr>
+<td>Userspace 이미지 세대 (<code>generation</code>)</td>
+<td><code>1.0 → 2.0</code></td>
+<td>새 Userspace 이미지가 만들어졌음을 확인합니다.</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="callout ok">
+<strong>정상 예시</strong>
+<p>
+<code>:hardened</code>와 <code>:userspace-update</code>의
+    <code>kernel-core</code>가 모두
+    <code>kernel-core-6.12.0-211.16.1.el10_2.x86_64</code>로 동일하면
+    다음 단계의 soft reboot를 진행할 수 있습니다.
+  </p>
+</div>
+<div class="callout danger">
+<strong>Kernel 버전이 다르면 여기서 중지합니다.</strong>
+<p>
+    두 이미지의 <code>kernel-core</code> 버전이 다르면 soft reboot를 진행하지 않습니다.
+    새 Kernel을 사용하려면 일반적인 full reboot가 필요하기 때문입니다.
+  </p>
+</div>
+</section><section id="s6"><div class="section-kicker">STEP 6</div><h2>Userspace Update + systemd soft reboot</h2><p class="lead">새 userspace가 적용되었지만 running kernel은 그대로라는 것을 여러 증거로 교차 검증합니다.</p>
+<h3>6-1. 전환 직전 기록 + switch</h3><div class="code-card" data-lang="shell"><div class="code-head"><span>Shell · bootc switch + soft reboot</span><div class="code-actions"><span class="quick-tip-wrap"><button aria-label="핵심 명령 빠른 설명" class="quick-tip" type="button">ⓘ</button><span class="quick-tip-pop" role="tooltip"><span class="tip-item"><b><code>bootc switch</code></b>현재 시스템이 추적하는 bootc 이미지를 다른 이미지/tag로 변경합니다. --apply와 함께 쓰면 변경을 즉시 적용합니다.</span><span class="tip-item"><b><code>--soft-reboot=required</code></b>soft reboot가 가능한 경우에만 작업을 진행하도록 강제합니다. 조건이 맞지 않으면 full reboot로 자동 대체하지 않습니다.</span><span class="tip-item"><b><code>SoftRebootsCount</code></b>systemd가 기록하는 soft reboot 누적 횟수입니다. 전후 값을 비교해 실제 soft reboot가 발생했는지 확인합니다.</span></span></span><button aria-controls="explain-26" aria-expanded="false" class="explain-toggle" type="button">명령어 설명</button><button class="copy" type="button">복사</button></div></div><pre><code>uname -r | sudo tee /var/tmp/kernel-before-soft-reboot.txt
+systemctl show --value --property SoftRebootsCount \
+  | sudo tee /var/tmp/soft-reboot-count-before.txt
+
+sudo bootc switch \
+  --soft-reboot=required \
+  --apply \
+  "${USERSPACE_IMAGE}"</code></pre><div class="command-explain" id="explain-26"><div class="explain-title">필요할 때만 펼쳐보는 명령어 설명</div><dl><dt><code>uname -r | tee ...</code></dt><dd>soft reboot 직전 running kernel 버전을 파일에 저장합니다.</dd><dt><code>systemctl show ... SoftRebootsCount</code></dt><dd>현재까지 수행된 systemd soft reboot 횟수를 기록해 전후 변화를 비교합니다.</dd><dt><code>bootc switch</code></dt><dd>현재 시스템이 추적할 bootc 이미지를 userspace-update tag로 변경합니다.</dd><dt><code>--soft-reboot=required</code></dt><dd>새 이미지가 soft reboot로 적용 가능한 조건이 아니면 일반 reboot로 대체하지 않고 실패하도록 요구합니다.</dd><dt><code>--apply</code></dt><dd>이미지 변경을 staging만 하지 않고 이번 명령에서 바로 적용합니다.</dd></dl></div></div><div class="callout ok"><strong>--soft-reboot=required</strong><p>soft reboot가 불가능하면 오류로 중지되므로 이번 변경이 정말 userspace-only인지 확인하는 안전장치 역할을 합니다.</p></div>
+<h3>6-2. 최종 교차 검증</h3><div class="code-card" data-lang="shell"><div class="code-head"><span>Shell · 최종 상태 검증</span><div class="code-actions"><span class="quick-tip-wrap"><button aria-label="핵심 명령 빠른 설명" class="quick-tip" type="button">ⓘ</button><span class="quick-tip-pop" role="tooltip"><span class="tip-item"><b><code>kpatch list</code></b>현재 커널에 설치·로드된 live patch module과 활성화([enabled]) 상태를 확인합니다.</span><span class="tip-item"><b><code>SoftRebootsCount</code></b>systemd가 기록하는 soft reboot 누적 횟수입니다. 전후 값을 비교해 실제 soft reboot가 발생했는지 확인합니다.</span><span class="tip-item"><b><code>bootc status --verbose</code></b>현재 부팅된 이미지, staged deployment, image reference와 digest 등 bootc 상태를 자세히 확인합니다.</span></span></span><button aria-controls="explain-27" aria-expanded="false" class="explain-toggle" type="button">명령어 설명</button><button class="copy" type="button">복사</button></div></div><pre><code>printf '=== 이미지 ===\n'
+sudo bootc status --verbose
+cat /usr/share/lab-image-stage
+cat /usr/share/lab-userspace-generation
+
+printf '\n=== Userspace 패키지 ===\n'
+rpm -q openssl openssl-libs glibc tree
+tree --version
+
+printf '\n=== Soft reboot 횟수 ===\n'
+SOFT_BEFORE="$(cat /var/tmp/soft-reboot-count-before.txt)"
+SOFT_AFTER="$(systemctl show --value --property SoftRebootsCount)"
+
+printf '변경 전: %s\n' "${SOFT_BEFORE}"
+printf '변경 후: %s\n' "${SOFT_AFTER}"
+
+printf '\n=== 실행 중인 커널 비교 ===\n'
+
+KERNEL_BEFORE="$(cat /var/tmp/kernel-before-soft-reboot.txt)"
+KERNEL_AFTER="$(uname -r)"
+
+printf '변경 전: %s\n' "${KERNEL_BEFORE}"
+printf '변경 후: %s\n' "${KERNEL_AFTER}"
+uname -r
+
+printf '\n=== 동일한 실행 커널에서 kpatch 유지 여부 ===\n'
+sudo kpatch list</code></pre><div class="command-explain" id="explain-27"><div class="explain-title">필요할 때만 펼쳐보는 명령어 설명</div><dl><dt><code>bootc status --verbose</code></dt><dd>실제로 userspace-update 이미지로 전환되었는지 확인합니다.</dd><dt><code>rpm -q ... / tree --version</code></dt><dd>새 Userspace 패키지와 marker 패키지가 현재 시스템에 반영되었는지 확인합니다.</dd><dt><code>SoftRebootsCount</code></dt><dd>soft reboot 횟수가 전보다 증가했는지 비교합니다.</dd><dt><code>uname -r</code></dt><dd>soft reboot 전후 running kernel이 동일한지 확인합니다.</dd><dt><code>kpatch list</code></dt><dd>같은 running kernel에서 기존 live patch가 계속 로드되어 있는지 확인합니다.</dd></dl></div></div><div class="table-scroll"><table class="verify"><thead><tr><th>검증 항목</th><th>정상 기준</th><th>의미</th></tr></thead><tbody><tr><td>현재 bootc 이미지 상태 (<code>bootc status</code>)</td><td>userspace-update + soft reboot: yes 확인</td><td>새 OCI OS image가 적용됐고 bootc가 soft reboot 경로를 사용했음을 확인</td></tr><tr><td>Userspace 이미지 세대 (<code>generation</code>)</td><td>2.0</td><td>새 새 Userspace 적용</td></tr><tr><td>Userspace 패키지 버전 (<code>OpenSSL / glibc</code>)</td><td>업데이트가 있으면 상향</td><td>보안 RPM 변화</td></tr><tr><td>Userspace 변경 확인 (<code>tree</code>)</td><td>설치 + 실행</td><td>Userspace 변경 확인</td></tr><tr><td>Soft Reboot 누적 횟수 (<code>SoftRebootsCount</code>)</td><td>증가</td><td>soft reboot 실제 수행</td></tr><tr><td>실행 중인 커널 (<code>uname -r</code>)</td><td>Before와 동일</td><td>커널은 그대로 유지</td></tr><tr><td>로드된 Live Patch 모듈 (<code>kpatch list</code>)</td><td>동일 kernel의 patch 상태</td><td>kernel을 재부팅하지 않았음을 보조 확인</td></tr></tbody></table></div><div class="callout ok"><strong>성공 판정</strong><p>generation 1.0→2.0 + tree 미설치→설치 + SoftRebootsCount 증가 + uname -r 동일을 함께 확인하면 새 userspace 적용과 kernel 유지가 동시에 증명됩니다.</p></div><div class="callout warn"><strong>sysctl 주의</strong><p>soft reboot는 kernel을 다시 초기화하지 않으므로 새 image의 sysctl 변경이 자동으로 새로운 running-kernel 값으로 재적용된다고 이해하면 안 됩니다.</p></div>
+</section><section id="s7"><div class="section-kicker">OPTIONAL</div><h2>RHEL 10 CVE 검증 — 현재 시스템 등록 + Lightspeed Remediation</h2><p class="lead">개인 Red Hat 계정으로 현재 RHEL 10.2 시스템을 RHSM과 Red Hat Lightspeed에 등록한 뒤, CLI와 console.redhat.com에서 현재 시스템의 CVE를 확인하고 발견된 취약점에 대한 remediation plan 생성 흐름을 확인합니다.</p><div class="callout info"><strong>이 단계부터 RHSM 등록이 필요합니다.</strong><p>Step 1~6은 Source Image에 포함된 <code>workshop-rhel10</code> Repository를 사용하므로 RHSM 미등록 상태로 정상 진행합니다. Step 7은 선택 실습이며, 개인 Red Hat 계정에 <strong>RHEL content access</strong>가 있고 외부 Red Hat 서비스에 연결 가능한 경우 현재 시스템을 RHSM과 Red Hat Lightspeed에 등록합니다. 등록이 되지 않아도 앞선 Image Mode/kpatch/soft reboot 실습 성공 여부에는 영향을 주지 않습니다.</p></div><h3>7-1. 현재 시스템을 RHSM + Red Hat Lightspeed에 등록</h3><div class="callout warn"><strong>RHSM 등록과 Lightspeed 등록은 별도로 확인합니다.</strong><p>이미 RHSM에 등록된 시스템에서 <code>rhc connect</code>를 다시 실행하면 <code>this system is already connected</code>라고 표시되면서 Lightspeed Analytics 등록은 완료되지 않을 수 있습니다. 따라서 먼저 RHSM 등록 여부를 확인하고, 이후 <code>insights-client --register</code>로 Lightspeed 등록을 명확하게 수행합니다.</p></div><div class="code-card" data-lang="shell"><div class="code-head"><span>Shell · RHSM + Red Hat Lightspeed 등록</span><div class="code-actions"><button aria-controls="explain-cve-register-v3" aria-expanded="false" class="explain-toggle" type="button">명령어 설명</button><button class="copy" type="button">복사</button></div></div><pre><code>printf '=== RHSM 등록 상태 확인 ===\n'
+if sudo subscription-manager identity &gt;/dev/null 2&gt;&amp;1; then
+  echo "RHSM: 이미 등록됨"
+else
+  echo "RHSM: 미등록 → 개인 Red Hat 계정으로 등록"
+  sudo subscription-manager register
+fi
+
+printf '\n=== RHSM 등록 정보 ===\n'
+sudo subscription-manager identity
+
+printf '\n=== Red Hat Repository 확인 ===\n'
+sudo dnf repolist
+
+printf '\n=== Red Hat Lightspeed 등록 ===\n'
+sudo insights-client --register
+
+printf '\n=== 현재 시스템 정보 즉시 업로드 ===\n'
+sudo insights-client
+
+printf '\n=== 현재 hostname ===\n'
+hostname
+
+printf '\n=== 연결 상태 ===\n'
+sudo rhc status || true</code></pre><div class="command-explain" id="explain-cve-register-v3"><div class="explain-title">필요할 때만 펼쳐보는 명령어 설명</div><dl><dt><code>subscription-manager identity</code></dt><dd>현재 시스템이 이미 RHSM에 등록되어 있는지 확인합니다.</dd><dt><code>subscription-manager register</code></dt><dd>미등록인 경우 개인 Red Hat 계정의 ID/Password를 프롬프트에 입력해 RHSM에 등록합니다.</dd><dt><code>dnf repolist</code></dt><dd>등록 후 RHEL Repository 접근이 가능한지 확인합니다.</dd><dt><code>insights-client --register</code></dt><dd>현재 hostname을 사용해 시스템을 Red Hat Lightspeed에 등록합니다.</dd><dt><code>insights-client</code></dt><dd>등록 직후 현재 시스템 정보를 다시 수집해 Lightspeed로 업로드합니다.</dd><dt><code>hostname</code></dt><dd>console.redhat.com의 Inventory에서 현재 실습 시스템을 찾을 때 사용할 hostname을 확인합니다.</dd><dt><code>rhc status</code></dt><dd>Subscription Management 및 Analytics 연결 상태를 확인합니다.</dd></dl></div></div><div class="table-scroll"><table class="verify"><thead><tr><th>검증 항목</th><th>정상 기준</th><th>의미</th></tr></thead><tbody><tr><td>RHSM</td><td>subscription-manager identity 성공</td><td>Red Hat Content 서비스에 시스템 등록</td></tr><tr><td>Repository</td><td>RHEL Repository 목록 출력</td><td>dnf updateinfo/kpatch용 Red Hat 콘텐츠 접근</td></tr><tr><td>Lightspeed</td><td>insights-client --register 성공</td><td>현재 시스템을 Lightspeed Inventory/Vulnerability 분석 대상으로 등록</td></tr><tr><td>Analytics 상태</td><td>Analytics 연결 확인 (Remote Management/yggdrasil은 inactive여도 정상)</td><td>Inventory/Vulnerability 분석 가능 상태 확인</td></tr></tbody></table></div><div class="callout danger"><strong>실습 중 실제로 볼 수 있는 상태</strong><p><code>rhc status</code>에 <strong>Connected to Red Hat Subscription Management</strong>는 보이지만 <strong>Analytics ... Not connected</strong>가 표시되고, 일반 <code>insights-client</code> 실행 시 <code>This machine has not yet been registered. Use --register</code>가 나오면 <code>sudo insights-client --register</code>를 실행한 뒤 다시 업로드합니다.</p></div><h3>7-1A. rhc status 읽는 법 — yggdrasil / Remote Management</h3><div class="callout ok"><strong>현재 출력은 정상입니다.</strong><p><code>rhc status</code>에서 <strong>Subscription Management</strong>, <strong>Content</strong>, <strong>Analytics</strong>가 연결되어 있으면 이번 실습의 CVE 조회와 Red Hat Lightspeed 분석에 필요한 연결은 완료된 상태입니다. <code>Remote Management ... The yggdrasil service is inactive</code>는 이번 실습에서는 오류가 아니라 <strong>예상 가능한 정상 상태</strong>입니다.</p></div><div class="table-scroll"><table class="verify"><thead><tr><th>rhc status 항목</th><th>현재 실습의 정상 기준</th><th>역할</th></tr></thead><tbody><tr><td>Connected to Red Hat Subscription Management</td><td>✅ Connected</td><td>RHSM 등록 및 Red Hat 서비스 사용을 위한 시스템 identity 연결</td></tr><tr><td>Content ... Red Hat repository file generated</td><td>✅ Connected</td><td>BaseOS/AppStream 등 Red Hat Repository 접근</td></tr><tr><td>Analytics ... Connected to Red Hat Lightspeed</td><td>✅ Connected</td><td>insights-client가 시스템 정보를 업로드하고 Lightspeed가 CVE/Advisor 등을 분석</td></tr><tr><td>Remote Management ... The yggdrasil service is inactive</td><td>⬜ inactive여도 정상</td><td>Hybrid Cloud Console에서 이 호스트로 remediation/task를 원격 실행하는 기능. 이번 실습에서는 필수 아님</td></tr></tbody></table></div><div class="callout ok"><strong>정상 등록 완료 예시</strong><p><code>rhc status</code>에서 <strong>Subscription Management</strong>, <strong>Content</strong>, <strong>Analytics</strong>가 모두 연결되어 있으면 현재 시스템은 Red Hat Repository와 Red Hat Lightspeed 분석 서비스를 정상적으로 사용할 수 있습니다. <code>Remote Management ... yggdrasil service is inactive</code>는 이번 실습에서 원격 remediation 실행을 사용하지 않으므로 <strong>정상적인 예상 상태</strong>입니다.</p></div><figure class="console-shot"><img alt="rhc status에서 Subscription Management, Content, Analytics가 정상 연결된 RHEL 10 시스템 예시" src="data:image/webp;base64,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"/><figcaption>예시. RHSM, Red Hat Repository(Content), Red Hat Lightspeed Analytics가 모두 정상 연결된 상태입니다. Remote Management의 yggdrasil이 inactive인 것은 이번 실습 범위에서는 오류가 아닙니다.</figcaption></figure><div class="code-card" data-lang="text"><div class="code-head"><span>개념 · 현재 실습에서 필요한 연결 범위</span></div><pre><code>RHSM / Content
+  └─ RHEL Repository 접근                 ✅
+
+Red Hat Lightspeed Analytics
+  └─ 시스템 정보 업로드                   ✅
+  └─ Inventory / Vulnerability / Advisor   ✅
+  └─ CVE / CVSS / RHSA 확인               ✅
+
+Remote Management (yggdrasil)
+  └─ Console → RHEL 호스트 원격 실행       선택
+  └─ Remediation / Tasks 원격 실행          선택</code></pre></div><div class="callout info"><strong>yggdrasil이란?</strong><p><code>yggdrasil</code>은 RHEL 10에서 Hybrid Cloud Console의 메시지를 받아 호스트에서 원격 작업을 수행하는 daemon입니다. 올바르게 구성된 경우 Red Hat Lightspeed remediation plan에서 생성된 Ansible Playbook을 받아 실행할 수 있습니다. RHEL 9 이하에서는 이 역할의 daemon 이름이 <code>rhcd</code>입니다.</p></div><details class="optional-details"><summary>선택 확장: Lightspeed에서 원격 Remediation까지 실행하려는 경우</summary><div class="details-body"><div class="callout warn"><strong>60분 본 실습에는 포함하지 않습니다.</strong><p>Remote Management를 사용하려면 <code>rhc-worker-playbook</code>을 설치하고 <code>yggdrasil</code> daemon을 활성화해야 합니다. 이 기능은 Hybrid Cloud Console에서 remediation/task를 호스트로 직접 내려보내 실행할 때 필요합니다.</p></div><div class="code-card" data-lang="shell"><div class="code-head"><span>Shell · 선택: Remote Management 활성화</span><div class="code-actions"><button aria-controls="explain-yggdrasil-remote" aria-expanded="false" class="explain-toggle" type="button">명령어 설명</button><button class="copy" type="button">복사</button></div></div><pre><code>sudo dnf install -y rhc-worker-playbook
+
+sudo systemctl enable --now yggdrasil
+
+printf '=== yggdrasil 상태 ===\n'
+sudo systemctl status yggdrasil --no-pager
+
+printf '\n=== Red Hat 연결 상태 ===\n'
+sudo rhc status</code></pre><div class="command-explain" id="explain-yggdrasil-remote"><div class="explain-title">필요할 때만 펼쳐보는 명령어 설명</div><dl><dt><code>dnf install -y rhc-worker-playbook</code></dt><dd>Lightspeed remediation plan의 Ansible Playbook을 실행하는 worker를 설치합니다.</dd><dt><code>systemctl enable --now yggdrasil</code></dt><dd>원격 관리 daemon을 즉시 시작하고 재부팅 후에도 자동 시작하도록 설정합니다.</dd><dt><code>systemctl status yggdrasil</code></dt><dd>yggdrasil daemon이 실제 active 상태인지 확인합니다.</dd><dt><code>rhc status</code></dt><dd>Remote Management가 활성 상태로 바뀌었는지 최종 확인합니다.</dd></dl></div></div><div class="callout ok"><strong>원격 실행을 사용하지 않는다면 활성화할 필요가 없습니다.</strong><p>이번 가이드의 권장 범위는 <strong>CVE 확인 → Plan remediation → Ansible Playbook Preview 확인</strong>까지입니다. 따라서 <code>yggdrasil inactive</code> 상태에서도 Step 7의 핵심 실습은 정상적으로 완료할 수 있습니다.</p></div></div></details><h3>7-2. CLI — dnf updateinfo로 현재 시스템 CVE/RHSA 확인</h3><div class="code-card" data-lang="shell"><div class="code-head"><span>Shell · 현재 시스템 보안 권고/CVE 확인</span><div class="code-actions"><button aria-controls="explain-cve-dnf-v3" aria-expanded="false" class="explain-toggle" type="button">명령어 설명</button><button class="copy" type="button">복사</button></div></div><pre><code>printf '=== 현재 적용 가능한 보안 업데이트 ===\n'
+sudo dnf updateinfo list updates security
+
+printf '\n=== 보안 업데이트 요약 ===\n'
+sudo dnf updateinfo summary security
+
+printf '\n=== 이미 설치된 보안 권고 ===\n'
+sudo dnf updateinfo list security --installed
+
+# 목록에 RHSA가 보이면 상세 CVE 확인
+# 예: sudo dnf updateinfo info RHSA-2026:12345</code></pre><div class="command-explain" id="explain-cve-dnf-v3"><div class="explain-title">필요할 때만 펼쳐보는 명령어 설명</div><dl><dt><code>dnf updateinfo list updates security</code></dt><dd>현재 시스템에 추가 적용 가능한 보안 권고(RHSA)를 확인합니다.</dd><dt><code>dnf updateinfo summary security</code></dt><dd>적용 가능한 보안 업데이트를 요약합니다.</dd><dt><code>dnf updateinfo list security --installed</code></dt><dd>이미 반영된 보안 권고를 확인합니다.</dd><dt><code>dnf updateinfo info RHSA-...</code></dt><dd>특정 RHSA에 포함된 CVE, 심각도 및 대상 패키지를 상세 조회합니다.</dd></dl></div></div><div class="callout warn"><strong>Image Mode에서의 적용 경로</strong><p><code>dnf updateinfo</code>는 여기서 현재 시스템의 보안 상태를 <strong>조회/검증</strong>하는 용도입니다. 영구적인 OS 패키지 업데이트는 앞 실습처럼 Containerfile에 변경을 반영하고 새 bootc 이미지를 빌드·배포하는 흐름으로 가져갑니다.</p></div><h3>7-3. Console — 등록된 현재 시스템과 CVE 확인</h3><div class="callout ok"><strong>등록이 완료되면 console.redhat.com에서 현재 시스템이 보입니다.</strong><p>같은 Red Hat 계정으로 Red Hat Hybrid Cloud Console에 로그인한 뒤 <strong>RHEL → Inventory → Systems</strong>에서 앞에서 확인한 hostname을 찾습니다. 시스템 상세 화면의 <strong>Vulnerability</strong> 탭에서는 해당 시스템에 영향을 줄 수 있는 CVE, Severity, CVSS, Advisory와 remediation 상태를 확인할 수 있습니다.</p></div><figure class="console-shot"><img alt="Red Hat Hybrid Cloud Console Inventory에서 등록된 RHEL 시스템을 확인하는 예시" src="data:image/webp;base64,UklGRvgkAABXRUJQVlA4IOwkAACwuACdASqkAb0BP2WszV8zLSklJLeqsmAsiWlu7mFSmkvsu6flAoPFMRvz4fOnnY+N/r//V/xv7/+evl8B/l//9f0Q///gTwAv23/dedi8p6fUAfcr98vQw+/83ONf/neCZ9t/6nsB/070c//Xyqfs3/5/fz3jP/WPIU7IREbGzS1puPfaeWU6fPRz0Wv0qsgGAtvhWoX58Lc6lX9eufIsiz5d+ji/+MqVfcztrfL/jNACaQGSOUYv0oSZ3mMfd7drd0pTUdUCAY6fnvjE73iQG709WzrckVQMXg3QX5j/oykUDduf9GAJLboWk6Jcz03ZbLMZruGXaTbmH/lD8ZDT3S7Sn546blU1dYVwWaPi2CgXe6Oaqbub0hlLxTedwmvzxLCn7DlY/VqLyiQqvFolqJ9oAVQgfkzThXU+dnBHZKqtGM3y9DpeBHzchki0X7sxVQL1CJQJVR1Yg4jBRJQja8Xf/H2tYIzNzwYI+wIi5kMW+5fXIwMdT534I7JY+MoaAMbg9ci8olKEN0KK/BHZLHyup87PLziQ17+1NyrUrAOulZr+zaFAX03bHRXErqfO/BHZLHysbnVeO52w5REWt10y7bCcyXfBHpag96MV5JSzZrmrn3lSFf9STW/BHZLHyup876qKqZxPkKibWcEjrTi8mIj5N+5qbSMfXw1IGUQDoRph4OqGlu6/TYPVq8Ph+kEw73K8CZksfK6nztQ9+sIljm0Cqc7pGb21AVDBR+RPnfgjslj5XU+UZvc16mweHO1FSu+pHZGzPu1mOZcmGEn/mw0E6kkAIozWbG/BHZLHyuptRtnU+UIckp2v3UYYxOZXwg/W/BHZLHyup87cxS4nxbMXBvsDxJbw3+RsA/Dni0K3YjgoyDoa0HDjH2kXLyAtXhIEf0uq8uqLnmX04DN7mduYvFuWUXIjfKuWOnUh4iWJEvodSMOj4WYK6HTdCDzZ4bxA3zFmO0tFK/BHY8z2CMwEKCaIVFkqATOHDqqa8ltKDXm832q633XPOVPkImRHilSaA4EqGb7tjfgjsf6ltA1ULX3FS+H6zJ1eLiYWoswmJX5TGG/d6zq09fBB5HmKww7EeynzvwR2Sx8roNUdFbQfiPk6i4Zg5hwU2n3In3oh1ifkC3dJS34pTJG4ePldT534I7JY2BxlZELwA50ecstADfYaENV1q7pB586SifnCORvO7XZPdjvpn+GXD8q5Y+V1PnfgiCfnOuBAKfTy2VXOo78A6FRGrZqwooY8to2sRmfqWE5jed+COyWPldT529QBVSJu5uBxjZaNLZN4gLHVsJjkrqfO/BHZLHyuprirMqDiO8MU62uIdnScxZEwuF1ev8FoHrD6XBlwhNdnxdMzQ3xMwU0Xohsz5gI8zqfO/BHZLHb9UtUO507F7Zw7TTzHXdsv7Ji5SI3jUzUFTm+8zVeuBiqpiscYFN6iL8ojslj5XU+XUZkAzeeSuoyEmdzHXYC9/FSGyMAQyu6Af6Ewjrmz7KbqEudS9BZw3DrCGhrXbTqYrXpZGoRz4KbWiB4hwjrXuUwFO+oo+p/BkxDOrtQHajdlHK5OVwFrwh0FrvEKcAVXGWk7hxEwCUurLjB8KWi3oyaAESBABhB4W5BX2QLI+Plx+IBZdcMNCopGb1OjUSKfP6IXqg5ACwIjMU+dpolXy/bzom3SdepRDABorVcRxtp8+/yUX1O9zbY8yHyIbav7IodtnweVg9YfyqHmX4I7IRZXxBgyFTSkcuceTIgMlZkXIUQFEQOdhVqdGBMyWPlWEdisVlL0ly4fmU3IfSWhdfoEHI4bqPfwP0Mq84MZRA4wWfqORqNv7MzSKTwmCpvGiOF5cl5XTswihs0WpwYaKw33QjryWVE9XWzNaAQwkSQmv5+WgPwLdsZQodgNnk3GT4mK5Ty3mlJMqwV0eUGZNuTmlvi0gIKU2Hhss+Fjtwn7Rlv/Srvy4I7HtLS1paYVcsbAAP73pUxY97FAyEtcuSyom7K5TVwgQIGGEMjb0A2nz8tLQXFRBMEQguHh3aZzco1/8vMG+SLkcNtdk81/KiZhFym/RKXC6Ng0cURlC/TLlf2X1vSm+EJRg8xbTzou3606xM2GU7q3MTDrK6FFCJSf4O3BagfDB9vH7vwbRh8Z19zNHp+FUd+jz32sDCQYBPrxkd/4wfD0tQLA3cRfZwhq38ScCTQRM0EB/y+p9+Ui8nPEQ4WmiRzph6wkOTm7XwIwXzaJjBGrMIAbU63MuMofaU8L/tJmaF2acPl1XQRbw8oh6T8cB2AbkG5aCniJHc6OjJGYL8pPrcFTOs1kcpwUlRBi+GXNRFY3ansiq6sjAQZoc0Gr0PQsALbT1+Twfc7p2pVRog3lyII+9SSdOPfiQgbuiqvJvkAZaKCOnuGyNXw4/uJtL796I070jMCO8z+sx6XXftp4HeoswXz2XaMQT5H0gUTH7kyWsix4pRJ0cDVMKccg4SFlXhypLVTYSX41x3dpgt5hKNlRQmvdEeFa1US6v1K/I3tP6Yeqc+ujuRvp/FONffEL9A+MqkDKkGHWFAE5jsLt5i+N5UcPa/b/aZN7+3CCpmD1eVWYJfL46H+VP/EEHbZ+qvjqjFdtHPwz742b8WoZOKEJ0eKbHWaB88Zp6CuLF65NFscKsQ+sL//PJ+Ahx02ZZn/LEMZ+0dbpGRAkcAviMOvhiDyvywisot+Vk3lLTidwPyumFap/VHH6J9ltVF3OjoMFlaQyv/BNwiX6hYPg6+XwLO5FvVscYsJUzJmuOBxMJQYEKL9HCN8xAcGNKHEkjsGBeORiTe7tgTYw9IdslG+ARy+2jd30egD/v5ZIKrk9uPt5EyE0CJs5mxtvk4ofSXEeK8FJCwQ9ILJCPk1PFgnD4zrpoG5Zp+DmEXNZu9wlIPleiyyScEjVVDyvnOeL1AG50mDaC2yKMfoBbbUgWuxmC3KUc8ombpqAQSOi1Ip3HLoQZOewAALrU+f+nA/0F6756TTaswXk6Zbj3BHK1cUvfK0g4vnE6akY+wc4kSz/vNUA7P1GHsGy7Dl+oixE02xriorP/jwM/2fKKir6CQWTpRDpdkth5loGqeHuRJAmGV597I5Chs3Bzk7a2P9851Qqz1HQbcHtmyLjeogNfmRgdsypfwq84g+6nfvJD7M/5zBVHLtNuUn/k9pSpJ5X9TMMETNQAeiVjYvEPwq2fnt7iGzCRPaPe5NjEtttDQkF1PsU4d2ALtI0vaLt9QAQ5fv0k3oXG3W7NWbGWC5ti3aPORjKAx9IuzdSPpef0j9RzCgvuNUwz6SAa9rp486CWkwRMvreThRek22OoGlW5MfyR2e/RxSicCQEjFp3fWUHar3ycXmF4OWrDuAGFaWJ7qXLhFzjr3BHS6OEtNS/0GKWXrK9fArQpSiZRkdKkgRqkuamJeXuhYmtErxy4SQur7u89fISKzSALEdhV9bYrc2rzadqWKeij6yiA0Qn0c/rHqW9/NKte81jL68IQ1H9+fPQ1k4ANSztm6+R9Nians+VfHlpWrw3CLj/VJ42TyyxIiQO3e2LCjiV/FgHONbb6Mb/HEOVHkyLGTZlGrISeu4y5EM2D0NfAeeNHZ1mWUi2FjR9ATTW3NeS1uPEjoNbEIZjIeE/pAVDfqErVYYGwByi2DEc+zARvG3DvjkCJTthphaiiUTr246swDtDTXWMjpnlZbu+uNp1aI6xIj/yn2gAAA7vSwnTkj8TL8aYgcF7i0LRWQYCOpv1x9XuupGU3i1PinKl7LK13krm5XjqQcHiHiT6mSt1EATzuLp7CEn5p2CHPdLJsNJlX3b16VZ7UvM/KmAyjk2HpK2gaR2hSfqkCqyGrYWkioEWvEoIreOMc1rts0oKz3XSjMiHkpjlezw7OjWdRLKydQI1aCiQXcr9vbQuI6PDGQ21GOW/x4Jx+oSTdxGJpq/YlbHDTovs3tTUs0nrbMbglf3fPSsnn4hg4jA4KJHbT0QfPYTwRi1kXJ2GAAvFVkhqOK3DMPH1MxpC/wuDm+llMSXN7RhLxvINH2bh6n8ltW95lldqhwYl/8l98tlu7YOiREoJLBXROnQHvkapVbuTv0PZlmxG31da9IHEUoifen+n9fZN+dqoAuc+hOm87AVfnJJmpW+MVtDWgsZcpNyrOtvGj9drNZ/iUzkoG+0Tsy5v/0/QorkLn6Q7fFm5TNeGjP/G7thwaQFVUEWaTQr/xldJvJKPOokn7ClcZS1kPgQ+2EcY7SOUKTkc4uuwVxOHIFtk4IkxCSRFt+9iAoIT42YD9EPuMG/7PfLB2JK32nGffZYvXoP3dfgsgJZIB5wgCw4IX2NkABzzF3IBAKDxyNk/iYGg7dm0u0/s5/eTaGTpSix6Ss3U0ZT7jcO9tab0wnuaDgjpaMhsHAs7X0UPbN7haHoOCDAdj1v9Fgtb73T+1eRokAqkg1zcNOokSgvgkLY4kvoHQZy2HKL6FwRa7z9jsSc/KqOl/TQf9KwzXRoDbWMve1lTypMwu6U+25356+cuALNjVWSPheqd8wmIyLcV62UsUsBJJM84Usey7zw6vWjZAm0RMVwBm12+VjUcD/e6exImcpdpzo5185eHXWYUBbmbYc32J7yfw5vHf5JwK2oH20sGfYjdRepGlFYvf54WDeISH5zaInnGXokX0HOEsAt4uHcRrPq2uXVd+QARNq+YDOErn4tpLgexVi57Ltxophr4GpPAFBziJfZCsh5s7LnrqFLOIcGyb/Y1cYwkCm/gL6Mwu4oKYBBrouAdebF0g+15bgt6m1l3mfWYptW8eDJ/w4f+6LyZoNWoSRsER6VBd283kLs2BmFOqOjGLNjwtzK7eKQAADjRKvVijZR0Jksaldet/iPq0fK9OiuqekM/YFz4h/rAKg/JJAA+pCG9DTemT37gNba6oCSJJr6AKvydnoI0aIpwZhVDu7jW9dPJqD1GJTppDB0Dr3bRWQzLfNkU4g7ML/ocP7sMhP7XxhysCD/VnNxCs0+TUE0RZI9YkdQ685/qSqlgU4jnjMgGJPCr4eMk/oDnLYShpoWDiscK104mawBhWksuBvlbbzorURy9ip3u4BQNGsMFKiVZV8GOha0I4+nWztyoKwAVHog1pOezhrd1z/uXwpJPkWep/HS1pEI55aJqQuarHcmr/RzT7VDO6DVNJxCrlCIBSDT4p43Ke3dARUnH//UB6kzBpsRr28lNqs+YqgGCW0Pti5rvuytLnzV09z4ybZ8l8E4l/EgMIDt+k35enPLkRRZuLk+7gHcWwVgy8NkYKjunX+nBNg0TBEVyQZkNoick6YFbI9dFAAAAe9Xyqo1+XHEm7CRG3YiUYXZdjzYvDkNMxJg3vGG/WvGQtENVMX9X7kEk+MKxRke/Ga2U6qG3X1h0qXQaQhapaVt++Mt40S6lNXAuvcfeo1qELAe+mDLgJ8ZOKZKW2ySkuOGiWspKsxemaQsEit8CiGzLBF3nzurZsqqsTcSk8VDcbQepiZNWHVtxYqyoll/8/5QB7RguXW/Q5hL8F//5oiptyKANIDAqrgCSGu+uHPy8QuwoVg9EZaFc+aibBEOy4+NGZF66LoWGNdYMOcfyP7+j96vubCPOOdZFslwaWFJuTtxJkf3TlT/ERqYCzibdq9pshb/nIg0V4RuCQbH9xWhR5OQK1xoTemEuUna5iHfq0V7FB8n18yRm0KIEa/JtKwO/76zLHo3uUCkrLcfVoogZsTXR/UlW+KD4XNJwss0RDvnNdMFwXOTA6wioELYaA5IgeOkANph6Nyina+H6Nx8o7YMGDOE8bZSJWjiUJwavW6eXlP7FDdr2IxBtBT2oePXFe6DwRHwxVhPArP/jNKmVKZe0GUP7xUCa1dOBRIFR9nyInoROtH9vWGLI6etEf7yLB7lCjrrHTkClmulIHrXF3V2pQdPq5mopKgvSGiGGbW+u72SYwu2oSvpiYVyPWdGvnMaDqIHSeYs4qubsOwUTepi6raatU6i9KoOwG3JwTKqsS7SJiq8z0LZsFpUo/VwA8RaXePmSZr6C1xgPXj4uhNpJoSxmpp8xIW7YxbLGlH7jUpBWBr6rwAtjIHZjDKNc6Bn/OcIFlQlXq842YCG4AiKNNgsO9DOclQAAAAIazYcYJfJUwVri6JYmb0l4ZPWiZSqDEbsYtIphvIyXceLZatAex5yFB45JWe91On+B0iKp24wPq2Qcu5nx9VVGNbLsinCLghqDgRRssEyRw6uZhFPtxs07apvAwYX9NKB1XaluZ8IKspgU/xZphIL72BZaSjC/Kii5iYXsuDstgWWkWpMRtNBPRCf72aVluYWUxCgjwIpY2JbnThfFFbIZcMaW5ym50vT4pybetmybdiJHPX1QOsyzHOA/xk7zSWsnJaqTBDSE8EQSzvU+bPsX6MrMaZgj7BNskVCGSHlayu0cRfE0UJj8IrnwRZ5vgAAHaHreYbl9WlnPTPo2ynZ2f4102OpbAD2qdG7F2zp8b4xNzbjv3cT6zUnG5uNo2HtM2SRPeobO+Y8wNd2JjJC/dLbhz8O/VkF7QY8uDIWYKxCokl2bgmwkLKQ6GsMcAdaBzQUKzvXSY2iAy+joBiuifHJWRhIXmYL4fELG+k8mygTfqjMlrA957OdolM6kd8tRxS2HsV2voVo+zVHl1+UGAETmBMqvio4oLKzwhsStEHMXgOhXcrxN+794SY9Inu/SxVTQsw8BzD3ca4kl6VU4r8aDX0TuwHY5LlrNUKnE1TfztxD9GrXGO4MHikrQZySx4rJHsNNtAGlLMjbonh3yGgNXcLHBvj47Z1S84Xyy+WmgRO8FmgEWVNwq7Kie4kzEXhW5dkexhMrmEjbw0wJRyL+FHVoAt1jYm9TnTeoD/AZF11MQbky+/HF9aG78OtKxEkb/d82nrBU2kjZWz0WpHUmOB1AQAWxhmcSQ6M4GmucXTGADG7bAmjpH3rUii642E/ab5KgDz2MCe+xVao9e/dxoAAUlER5+gyfpYSOfTHVJFubM8THJXSU8feD41Jdq/SWgwiAP5IPRWFp7S1++NSVxnJx0UHKKe6aM48jcLNzoc+7zXRqfEFsNd8KeTlAWVr0aAAUZCegj8nPZuAhUTkx+VdVIz7dklKBu2DTIEkqiCFhNzTNGjX/Ba4SVr82+49vyfLNhe1yTnkSyGMJ/RlMgjaLMpJM91NZ/kBZ4TeqxkzfJVSWXa4x1T2GWVwYjcOovtXRb8wXplUIJgJUynpYVAt7du6uEAEPpERsgtYchbtSTOdIx/QwCcTGsMmF//DfxF6T1XKBxcocidGAERY7vYTWh9oLNVXgb5ywJduaVlAbVtNGV1BNs64vBNcCJS7JdT3vMPDA63C8IsvgXCHzgOju2WkhZFjNNelPP3hsaC53kFSgohXu2J2khsS/2E0HLL+SpWRQ+NqCfx6WtjWUyaqnXcsNDr0ettyThPWQMrpplkDw6op/hFgyH5NTI1gJxDlYUz6SmqVVUt+s7KJTwREe2ue6s9VPH/ocRSslSJnhtAvQeARwOrOogLNIE70vnLf5iJwwwA8eFlJ+/ajSMbhkkhD5jM7pHmAHukolslHNAkPsE7+yGsmPJFiVmMO3Fu4oTGQnV00woPzjXxoG3rMpur+DPz7tixzVadOk1jDlIVd/DNhZ+zpxHd7RomhdH0qzbsZ1ySY3ZQracBMZSJzbAIp8Rm5hZq2rsXfRpm8ej+09jcU4MUfUGZhECyNTElQJoicCwQ0EJR2+7Y0BUGoQGE+CIQT70elm4+iMPrgh7VGc2fMP+uxa2BLPpDbS6XLk/Yh+XhDNJTQkW54v43zzDas+AmfbB8rXNA5dJ0tKQ7pkF3oG1oyQISr7rbiQtXUBOWBNcOgCG1IYcFBIyIUaEgwZGBE7aHCYsGdlAfGY2eEDVeBtxod50FqXfBEyB55pPVUeMuAAJ5A6xIvlAsUkVT/tJvIdNWmJkPOCdrJgk/CuLkIRXpFZlhC8ht4jbBj7T+cMG8EStPhOEugPAdng2D7syoZULGABKq8Zoh9EzQMXFhkMli1sgarrtS7iV6yYIUY9Ui+YBSh7XuGL41eQg84+Pefo2q3jhZ3X0z6ewpVAbodc3fAAZ5RZWVhXyQr73o5oi1DhghlaZq1XP/bQ2VrG9OmVuEYdN0CND4f0/C59+pnI9w9h5UUqrEBAo7FOl9Ec27qiYA3y71B3MOXTruRb0KKQ5lz1mCxkb9RF3IPpXkhoqcK3Z12N+NrKWmbEV8eYNF+WBoiBvjCVYr9AMDbEuaP5LTAoo2IaM4ryMSv2gQ1jBHLqG/yZbMmU39rb1nGdFCcqjgPdGz5RAw/CFWg7eWN1zzPg3W85odhCYWmAjCuSjvdnMeyR9t19Zb578DKOGSevePLwK0B09CbaSfCNpnUB3Dj6Aa11slUzjLUlsgzapwgEOHAvV6tBzB/M/kFl0EaM051M2yiQV0aJokycF96nlyJ8SYcBch1gROybgIJs3EUh+ofIbbsd4f3DBMT7iy6fGB9tFFYSaL1GMl9EnRbAEngomKS0+HfoE84q1gMgA62+yaawW4MyxeS4PoO9h2ADN2GqDHbHv839rzXIQjm1h9hsi8IJk+nGNK8IrbiqXKuGCgfuTDeerjieeLw+K1uPGmdXNtIm1R50JT6uUHbaRkIGxd0GTA//AugL9rutb0xwq4XZHJCAKVbDiq8rp0b3T1X7kKtxMUQziXRCUsdOtkHYCtgrI75j93WwCn6OVDsZsJEzG4+2/UvUGAP/2GuXVAdcwDqJBmaslHufpuD/iKS4x6BJlKYMwWEhZ5HHUis0nC/PG3geHFK5hvaQKYaq25keItI8Q4eIwmf/HKqYfLXYF+IQ9AvmoeSCZWMUKZaEwPp5oMBrfpoep7MOpsYY5Dm2YWHbS8edOfKjhUwSeitxor8tUNtgw+6/Zjkd1Y9ld/gqs4d5DL+CBai6Z6v2bswUj65y3P/RcoliNC+MEOuyUMTDLmdinfnCmf0o54jOI4z6N0VoUNnhLd+Q7QklTVLj/AVTz+zn5zENJT7NdA6wjNm+vd8ab55i24oAHlRwGsaI3sEj2MqAUgbj6NeDsqGHqnN1TcPGPv4RU0gCKc/qB1PX91Lw8WdKbXXYwTz3ZgLhxaprE7QaMLyDrsZriziMdLe6TuKr3dHtfLajHnofYBnAYAmMte4PmlIJ7ulVjBjkVibQGHVs67Whf+qAnK+p/wJ/skk28zL9pOh/jm3BiJR8Ajx6Sb24bTt6cAPhlPjsiuaV1puauRfWWbTG4hg1aZPYzhUC+03ZnRzGSMVWcWFsdAL0dM/JRCCvfcCp8gTV3MkeZnNyWzv3h3r+Mz4G7NtmMjf124GKu9kvWHQzelYjMkOK764KkaErhEjQIMQRJe6A17ErnVKkQXl94qMs0wu6TVrZwqCihoaMoqYdFOx1qBNr2XXP5FEWbaK0+xmYnBjR+0f9kkXBDel8AYCoJud9LGNZ86q9kwKl1gSi2zODKkNZ4zxQfTcgkHjlxBwIF7wdW/h2Q+1MgYNXTomCzb0312wOnc+1gpWCPhjeydMH2sO5rMD5s7xg73d9bn1z6VX9PWQlckgZikqYIt0+YcH0Xsw5BkTXyajcj0w2u7zhTwIj21KqdMEUPHlBODp+VP4/fCKcueSFqtE8iefF3WE76WIxVNuBWeAL6ut0gEyfCXPnJgIguQT2iFBABEtVENWVcQNvrrOdwIxOSrEn3kkcDIsHZBZR1vDvV9f9BlIcb2dXKTxX+Q5asaGuJZ9NdmAR9ParR+EJ1rcVrgu3mME+APzVmLsEUgmyfB+2ZuS6FGYK6XqgJN+jOuNSb3Xf0jp8IgaySKqlpYoLXFE7H+rihLPsdethhw9OgqXThxv2/ihqx0x4Rgc17weUMrJ7K9aW/Dwxh0D+OsdNpWuVlay+kEOU1JjzFdyKF4GhypZCLqC5KuX5c8ejlZjg50vIduean8BhsHgytK2BIclWc2YiWG+AkjsUg7/GYvZPT5ggOmqMhDUXKt6YCAJ/Iac7Ucw/pb9e2cdxuCqaSe/ta42iEXVS1oIehff4nXevrwViFfDe3XoWlQfjt8NasvqrZ9aNhwqUZR/qRKei8tSRMHV/FAacFJEGJqPRbc3E3HifFWWUncjjaTrXMJFtm6nH1aJmgRpwknS0Nx4rlSK770ziecLm1RSnrVnV+6Hm7HjkGknSDsNBNAT8ysY3aPlOKde2twIAXXMstOHGrTWDykF1y0GcLKVrcoR6kMkfZEbS0IgVqWMNltEbPqO0XGMKJ3h0VeCk6C9riUOEyjcvCXDvUiBZRk+Q4G9ElZjGauYik92QMNpVIebGCvy4X6WrG4w9abWkrdtKzol3t5hzJl2IAzg0lux9OKSi371mEEzRnhH2nZXOQTCCXznvqHh/3JP3OXjC9E3UnLFwb1BZJdlGF/p8Msg7p5QdcqfgU6JweFIYzInd0jZsZuhGMjl99yDtRumSJdrUcz0SmMSWiOZe9/LGNqwdDrBTJW3o/94D6beg5fb/ZGX0otiQc1DMKTYOCvmpngHtVv0jghLbxnDpPWuD3FEBqs9Fk3ETJF+YbzWMTr/YDFubah1ac05C8VGy450S9BNfOakRJpwoAfSYHL7vcay8V0fxQCB4/Szt53CE8oVqX3dDTJMMbO0sA4UcDfRUHQB9/OeC8S9oWuHyBosqDDHomfAQ5xxREZO+6OnhPBZWQhk4DFtm820UK6NiDtn6V8gVlQVjhZsy65DA4jSlQopMc+Y0F7o64qA4dsJXfomCSSmwvzhGMUVNv7H87ZBarEvgExF6ff0Ap89lprlJahV+Bcp/+B3ddo6uzr6VetO72QV5Vc+HJ1ek8Ryaqds1437yZ5NeUOAILIU78pSmCsqtlaqmuVDXf70ZSkAsEud3FdWXpzLudteYQe0FIZ6unOlP9oOTaFihL7Z0WoW0Nmq/Slpd/jZAme+HaR4PsnMG+kr6H2RU6klxaZ7rSUUNHQqB9bEUWhzaR4MSD+YqtaIN5WT6Apb27hUXTCkDsEw6l/XRltC7meA8F3e+YDXkOf14+e8DYxKMo+Cilzg5ry2FA0gPCx+Y09Utwk8qxTrzUKaMalj3UjSZOa3SzBXoyQpPW3rVu7FgBx9jHVKOyEC1cSYiEzLB97mEsKFhsJ2iyDm6l45N3uIydMktVOdsxLykXaHxbmq6H6qifj0gqqtpHFvUpLyKwvQKMEUw+ImiLxVFmjwIPnZoLSxfi4oq6scQymXvNhFUutMMx0jUTbUXlbns6LNZlB/OWjlKB/ury75Q9xUt8mciGoFlPZE/p/u08PfU8s0eem6F/owLj0JsC3MtUfiH9hy7GxSdyT+5wIRC/ZZwEWM2+MbsW1O3EHpI7JOBEufN6MLXv/jJaHo6F7LOiNvv+bVYQvMsmitpmKQQKhUu8iGHgChHoQ2G5F+QqbvE/wDH4XYu7reD/swOaJGyR7Qz5VFTwhsEwpXijuAxN546UtA/lDL/FfNddlhliZEPPvKnP5rloSEMltlWm2UuAyDNZXtKI+XsiOCuQ/jl+3vpvAJ/BhspYmpvC0giVNwgUR5fmK1Arezno5ItbQZ2Hibq+RSr7WuAQxzU3kEDZ9A1YuzH4q53WAFcjOnEnasZDMUtmTGfi0xtoB5IstXzXNtPPts+uxPvic9NCVvKVvHRvUGs4s5xcKld5yZBOO1s7V4BjnHUY+RA3KmLb2PPzT+mb/EWrb7n290hTJlHJlnCFtM1Fq4l9PkDiMpaPGudSKp7ZwiyH4weCfP6WAJ61iBgDjqeadOeXX7gD0KXn46yyYKA20pspY/nqthI3WIRfzohrtK+GWKbbfKONaBy1d3JeWF5Etm8zc5aLQi/Y1MFXrJiMtyQEPjXsrM+lfdm2W61vMcRWLtYxPH0ZGBKk0SBNGW+Sw4VfYuixlIAX378JawYAJpik1eRVIw+nvBTvjtoFUwNHqXuQbrRiuKAeqyWkyb5VjQF6RHS//VVzStLlcXTxV5SPTT6QUScMxLKrtWOyZj4WfxSbutUJszcpBvGGr2nOBRlklQvhNOmsRKpM2MUmlWrVq9WyUSOpPpzunuA7/cjNy1++8nKT92MM86nd3mhBaYJ6kZJDuEbOEfEtc4sikIBdkFq0HCv4iQdlo5IrPso9xuDIpXxgBv7Yfi/eEkNbfj0SFdlZVha6XCwBqc24pfPAEcenNbxxl2Xc+il5SBoJEclM7HUi7/KNxjhvOmcDeFL8dBr4sLYjAsjLyHVSx5n8Su0ZXb5DclWzesYtD/XsjUckOL4zGUo0mV7Rp1riROlPIZlqZtw/mc0JJYztwWzZkEg+IrrVp3nSJZ+EAnBbMlNxRr5V1iARyDAm8pZdznpWaTVcuDrbvUwACoMrrQoK46OCgVWYefAX12Ag6Z3cyVcuoCjp22sWw5zpy/HJmdaR0Z7D6kPdRnCeorab5QJWtqMp9p/ACdsatlIMGR1oxWVzFdKMKHetOFzA2kGstwO20CBjHEJd2gb3cneP9i4c3h90CN6fgz3dBA99StEWlsvGaWeGE+kpT+cx7fthEGBwlv/8AhsIGroWAAAAAA=="/><figcaption>예시 1. Red Hat Lightspeed에 등록된 RHEL 시스템은 Inventory에서 확인할 수 있습니다.</figcaption></figure><figure class="console-shot"><img alt="Red Hat Lightspeed Vulnerability 탭에서 CVE 목록을 확인하는 예시" src="data:image/webp;base64,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"/><figcaption>예시 2. 시스템의 Vulnerability 탭에서 발견된 CVE와 Severity, CVSS, 연결된 RHSA를 확인할 수 있습니다.</figcaption></figure><h3>7-4. 발견된 CVE에 대해 Remediation Plan 생성</h3><div class="callout info"><strong>Remediation Plan 생성과 원격 실행은 다릅니다.</strong><p>현재 시스템이 Red Hat Lightspeed에 등록되어 <strong>Inventory/Vulnerability</strong>에서 CVE가 확인되면, 해당 CVE를 선택해 <strong>Remediation Plan을 생성하고 Ansible Playbook Preview를 확인하거나 다운로드</strong>할 수 있습니다. 반면 Lightspeed 콘솔에서 그 Playbook을 해당 RHEL 시스템에 <strong>직접 원격 실행</strong>하려는 경우에는 <code>yggdrasil</code> 기반 <strong>Remote Management</strong>가 활성화되어 있어야 합니다.</p></div><div class="callout info"><strong>CVE 확인에서 끝나지 않고 remediation까지 연결할 수 있습니다.</strong><p>Vulnerability 화면에서 대응할 CVE를 선택한 뒤 <strong>Plan remediation</strong>을 누르면 Red Hat Lightspeed가 해당 CVE의 수정 또는 완화 작업을 포함하는 <strong>Ansible Playbook 기반 remediation plan</strong>을 생성합니다. Plan을 만들기 전에 Preview를 다운로드해 실제 적용될 Playbook 내용을 검토할 수도 있습니다.</p></div><figure class="console-shot"><img alt="Red Hat Lightspeed Plan a remediation 화면과 Ansible Playbook preview 다운로드 예시" src="data:image/webp;base64,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"/><figcaption>예시 3. 선택한 CVE에 대해 remediation plan을 만들 수 있으며, 생성 전에 Ansible Playbook preview를 다운로드해 검토할 수 있습니다.</figcaption></figure><div class="table-scroll"><table class="verify"><thead><tr><th>검증 항목</th><th>정상 기준</th><th>의미</th></tr></thead><tbody><tr><td>시스템 Inventory</td><td>현재 hostname 확인</td><td>등록한 실습 시스템이 Lightspeed에 수집됨</td></tr><tr><td>Vulnerability</td><td>CVE / Severity / CVSS / Advisory 표시</td><td>현재 시스템의 취약점 노출 상태 확인</td></tr><tr><td>Plan remediation</td><td>선택한 CVE가 remediation plan에 추가</td><td>취약점 대응 작업을 계획으로 구성</td></tr><tr><td>Download preview</td><td>Ansible Playbook preview 다운로드 가능</td><td>실제 적용 전에 remediation 내용을 검토</td></tr></tbody></table></div><div class="callout warn"><strong>이번 워크숍에서는 실제 원격 실행까지는 필수로 하지 않습니다.</strong><p>Red Hat Lightspeed에서 생성한 remediation plan은 Ansible Playbook으로 다운로드해 별도로 실행할 수 있습니다. 또한 remote execution이 올바르게 구성된 환경에서는 Lightspeed에서 원격 실행도 가능합니다. 이번 공유 실습 환경에서는 시스템에 실제 변경을 가하는 자동 remediation 실행보다 <strong>CVE 확인 → Plan 생성 → Playbook Preview 확인</strong>까지를 권장 범위로 둡니다.</p></div><h3>7-5. 선택 — 실습 종료 후 등록 해제</h3><div class="code-card" data-lang="shell"><div class="code-head"><span>Shell · 실습 종료 후 등록 해제</span><div class="code-actions"><button aria-controls="explain-cve-clean-v3" aria-expanded="false" class="explain-toggle" type="button">명령어 설명</button><button class="copy" type="button">복사</button></div></div><pre><code>printf '=== Red Hat Lightspeed 등록 해제 ===\n'
+sudo insights-client --unregister || true
+
+printf '\n=== RHSM 등록 해제 ===\n'
+sudo subscription-manager unregister || true
+sudo subscription-manager clean
+
+printf '\n=== 등록 해제 확인 ===\n'
+sudo subscription-manager identity || true</code></pre><div class="command-explain" id="explain-cve-clean-v3"><div class="explain-title">필요할 때만 펼쳐보는 명령어 설명</div><dl><dt><code>insights-client --unregister</code></dt><dd>현재 시스템을 Red Hat Lightspeed에서 등록 해제합니다.</dd><dt><code>subscription-manager unregister</code></dt><dd>현재 시스템의 RHSM 등록을 해제합니다.</dd><dt><code>subscription-manager clean</code></dt><dd>로컬에 남은 RHSM identity/subscription 데이터를 정리합니다.</dd><dt><code>subscription-manager identity</code></dt><dd>등록 해제가 되었는지 최종 확인합니다.</dd></dl></div></div></section><section id="s8"><div class="section-kicker">EXTRA</div><h2>Rollback / 문제 해결</h2><div class="callout info"><strong>60분 core 실습 제외</strong><p>시간이 남는 경우에만 Rollback을 수행합니다. 60분 본 실습의 성공 기준은 Step 6의 Userspace Update + soft reboot 검증까지입니다.</p></div><p class="lead">Rollback은 시간이 남을 때 수행하는 추가 실습이며, 문제 해결 표는 실습 중 오류가 발생했을 때 참고합니다.</p>
+<details class="optional-details"><summary>추가 실습: Rollback 보기</summary><div class="details-body"><h3>8-1. 선택: Rollback</h3><div class="code-card" data-lang="shell"><div class="code-head"><span>Shell · rollback</span><div class="code-actions"><span class="quick-tip-wrap"><button aria-label="핵심 명령 빠른 설명" class="quick-tip" type="button">ⓘ</button><span class="quick-tip-pop" role="tooltip"><span class="tip-item"><b><code>bootc rollback</code></b>현재 deployment의 이전 bootc deployment로 되돌립니다.</span><span class="tip-item"><b><code>--soft-reboot=required</code></b>soft reboot가 가능한 경우에만 작업을 진행하도록 강제합니다. 조건이 맞지 않으면 full reboot로 자동 대체하지 않습니다.</span><span class="tip-item"><b><code>bootc status --verbose</code></b>현재 부팅된 이미지, staged deployment, image reference와 digest 등 bootc 상태를 자세히 확인합니다.</span></span></span><button aria-controls="explain-28" aria-expanded="false" class="explain-toggle" type="button">명령어 설명</button><button class="copy" type="button">복사</button></div></div><pre><code>sudo bootc rollback --soft-reboot=required --apply
+
+# 재접속 후
+sudo bootc status --verbose
+cat /usr/share/lab-image-stage
+cat /usr/share/lab-userspace-generation
+uname -r</code></pre><div class="command-explain" id="explain-28"><div class="explain-title">필요할 때만 펼쳐보는 명령어 설명</div><dl><dt><code>bootc rollback</code></dt><dd>현재 deployment의 바로 이전 bootc deployment로 되돌립니다.</dd><dt><code>--soft-reboot=required --apply</code></dt><dd>가능한 경우 soft reboot 방식으로 rollback을 즉시 적용하고, 조건이 맞지 않으면 임의로 full reboot하지 않도록 합니다.</dd><dt><code>bootc status / marker</code></dt><dd>재접속 후 실제로 이전 이미지 단계로 돌아왔는지 상태와 marker로 확인합니다.</dd><dt><code>uname -r</code></dt><dd>rollback 이후 running kernel 상태도 함께 확인합니다.</dd></dl></div></div>
+</div></details><h3>8-2. 문제 해결</h3><div class="table-scroll"><table class="verify"><thead><tr><th>검증 항목</th><th>정상 기준</th><th>의미</th></tr></thead><tbody><tr><td>stage 1 requires a FROM instruction</td><td>Containerfile 깨짐</td><td>nl -ba / grep ^FROM 후 재작성</td></tr><tr><td>repository not found</td><td>앞 build 실패/이름 불일치</td><td>build→images→push로 단계 분리</td></tr><tr><td>Quay가 빈 것처럼 보임</td><td>repository/tag 혼동</td><td>Tags 메뉴에서 hardened/userspace-update 확인</td></tr><tr><td>manifest unknown / :latest pull 실패</td><td>Source image tag 생략 또는 존재하지 않는 tag</td><td><code>quay.io/yeslee/rhel10-bootc:10.2</code>처럼 실제 존재하는 tag를 명시하고 먼저 <code>podman pull</code>로 검증</td></tr><tr><td>unauthorized</td><td>Quay auth 누락</td><td>podman login + /etc/ostree/auth.json</td></tr><tr><td>SSH Host Key 변경 경고 (<code>REMOTE HOST IDENTIFICATION HAS CHANGED!</code>)</td><td>의도한 OS 교체 직후라면 정상</td><td>Windows / macOS / Linux에서 <code>ssh-keygen -R &lt;OpenTLC-호스트명&gt;</code> 실행 → 재접속 → 새 fingerprint 확인 후 <code>yes</code>. 재설치 없이 발생했다면 먼저 원인을 확인.</td></tr><tr><td>kpatch list가 비어 있음</td><td>이번 실습에서는 비정상</td><td><code>dnf repolist</code>에서 <code>workshop-rhel10</code> 활성 여부를 확인하고, <code>repoquery</code>로 1-5 package 제공 여부, <code>rpm -qa</code>로 설치 여부, <code>uname -r</code>로 대상 kernel 일치 여부를 확인</td></tr><tr><td>soft reboot required 실패</td><td>kernel/low-level 변경</td><td>kernel-core 동일성부터 재확인</td></tr><tr><td>변수명이나 리다이렉션 앞에 불필요한 backslash가 보임</td><td>문서 포맷용 escape가 실제 코드에 섞임</td><td>2-2의 Containerfile 전체 블록을 다시 복사하고, 바로 아래 “Containerfile 자체 검증” 결과를 확인</td></tr></tbody></table></div>
+</section><section id="check"><div class="section-kicker">FINAL</div><h2>최종 검증 체크리스트</h2><div class="progress"><span></span></div><div class="mini progress-text">0 / 13</div><div class="checklist"><label><input type="checkbox"/>출발 host가 RHEL 10.0 Package Mode임을 확인했다.</label><label><input type="checkbox"/>quay.io/yeslee/rhel10-bootc:10.2가 실제 RHEL 10.2인지 확인했다.</label><label><input type="checkbox"/>참가자가 :hardened Containerfile을 직접 작성/build/push했다.</label><label><input type="checkbox"/>lab-user, SELinux, sysctl, kpatch 도구를 image 내부에서 검증했다.</label><label><input type="checkbox"/>RHEL 10.2 Image Mode 전환 후 runtime hardening을 검증했다.</label><label><input type="checkbox"/>OS 전환 후 로컬 PC의 이전 SSH host key를 정리하고 새 key로 lab-user 재접속을 확인했다.</label><label><input type="checkbox"/>kpatch: workshop-rhel10 Repository에서 대상 patch를 확인하고 [enabled] Live Patch를 적용했다.</label><label><input type="checkbox"/>같은 repository 아래 hardened/userspace-update 두 tag를 확인했다.</label><label><input type="checkbox"/>두 tag의 kernel-core 동일성을 확인했다.</label><label><input type="checkbox"/>OpenSSL/glibc + tree + generation으로 userspace 변화를 확인했다.</label><label><input type="checkbox"/>SoftRebootsCount 증가 + uname -r 동일을 확인했다.</label><label><input type="checkbox"/>Containerfile이 한 블록으로 생성되고 Markdown escape artifact가 없음을 확인했다.</label><label><input type="checkbox"/>선택: dnf updateinfo 또는 Red Hat Lightspeed로 CVE 검증 방법을 확인했다.</label></div></section><section id="refs"><div class="section-kicker">REF</div><h2>참고 문서</h2><ul class="ref-list"><li><b>RHEL Image Mode overview / RHEL bootc</b><br/><a href="https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/10/html/using_image_mode_for_rhel_to_build_deploy_and_manage_operating_systems/introducing-image-mode-for-rhel" rel="noreferrer" target="_blank">https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/10/html/using_image_mode_for_rhel_to_build_deploy_and_manage_operating_systems/introducing-image-mode-for-rhel</a></li><li><b>system-reinstall-bootc deployment</b><br/><a href="https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/10/html/using_image_mode_for_rhel_to_build_deploy_and_manage_operating_systems/deploying-the-rhel-bootc-images" rel="noreferrer" target="_blank">https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/10/html/using_image_mode_for_rhel_to_build_deploy_and_manage_operating_systems/deploying-the-rhel-bootc-images</a></li><li><b>Private registry pull secrets</b><br/><a href="https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/10/html/using_image_mode_for_rhel_to_build_deploy_and_manage_operating_systems/managing-users-groups-ssh-keys-and-secrets-in-image-mode-for-rhel" rel="noreferrer" target="_blank">https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/10/html/using_image_mode_for_rhel_to_build_deploy_and_manage_operating_systems/managing-users-groups-ssh-keys-and-secrets-in-image-mode-for-rhel</a></li><li><b>DNF / transient changes in Image Mode</b><br/><a href="https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/10/html/using_image_mode_for_rhel_to_build_deploy_and_manage_operating_systems/system-configuration" rel="noreferrer" target="_blank">https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/10/html/using_image_mode_for_rhel_to_build_deploy_and_manage_operating_systems/system-configuration</a></li><li><b>systemd soft reboot for bootc</b><br/><a href="https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/10/html/using_image_mode_for_rhel_to_build_deploy_and_manage_operating_systems/performing-soft-reboots-to-rhel-bootc-images" rel="noreferrer" target="_blank">https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/10/html/using_image_mode_for_rhel_to_build_deploy_and_manage_operating_systems/performing-soft-reboots-to-rhel-bootc-images</a></li><li><b>RHEL 10 kernel live patching / kpatch</b><br/><a href="https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/10/html/managing_monitoring_and_updating_the_kernel/applying-patches-with-kernel-live-patching" rel="noreferrer" target="_blank">https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/10/html/managing_monitoring_and_updating_the_kernel/applying-patches-with-kernel-live-patching</a></li><li><b>RHEL 10 Release Notes — CVE OVAL v2 feed no longer provided</b><br/><a href="https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/10/html/10.0_release_notes/removed-features" rel="noreferrer" target="_blank">https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/10/html/10.0_release_notes/removed-features</a></li><li><b>RHEL 10 Security Hardening — OpenSCAP configuration compliance</b><br/><a href="https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/10/html/security_hardening/scanning-the-system-for-configuration-compliance" rel="noreferrer" target="_blank">https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/10/html/security_hardening/scanning-the-system-for-configuration-compliance</a></li><li><b>RHEL 10 Security Updates — dnf updateinfo</b><br/><a href="https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/10/html/risk_reduction_and_recovery_operations/managing-and-monitoring-security-updates" rel="noreferrer" target="_blank">https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/10/html/risk_reduction_and_recovery_operations/managing-and-monitoring-security-updates</a></li><li><b>Red Hat Lightspeed — RHEL 10 system registration</b><br/><a href="https://docs.redhat.com/en/documentation/red_hat_lightspeed/1-latest/html/registering_rhel_systems_and_configuring_client_tools_with_red_hat_lightspeed/connecting-and-registering-systems" rel="noreferrer" target="_blank">https://docs.redhat.com/en/documentation/red_hat_lightspeed/1-latest/html/registering_rhel_systems_and_configuring_client_tools_with_red_hat_lightspeed/connecting-and-registering-systems</a></li><li><b>Red Hat Lightspeed Vulnerability Service</b><br/><a href="https://docs.redhat.com/en/documentation/red_hat_lightspeed/1-latest/html/assessing_and_monitoring_security_vulnerabilities_on_rhel_systems/vuln-overview_vulnerability-assess" rel="noreferrer" target="_blank">https://docs.redhat.com/en/documentation/red_hat_lightspeed/1-latest/html/assessing_and_monitoring_security_vulnerabilities_on_rhel_systems/vuln-overview_vulnerability-assess</a></li></ul></section><div class="toolbar"><button onclick="window.print()">인쇄</button><button id="resetChecks">체크 초기화</button></div>
+</main></div><script>
+function escapeHtml(s){return s.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));}
+function highlight(code,lang){
+  let lines=code.textContent.split('\n');
+  code.innerHTML=lines.map(line=>{
+    let e=escapeHtml(line);
+    if(/^\s*#/.test(line)) return '<span class="com">'+e+'</span>';
+    if(lang==='containerfile') e=e.replace(/^(FROM|ARG|RUN|COPY|LABEL|CMD|ENV|WORKDIR)\b/,'<span class="kw">$1</span>');
+    else e=e.replace(/^(\s*)(sudo|export|printf|cat|echo|read|unset|rpm|uname|systemctl|sysctl|mkdir|grep)\b/,'$1<span class="cmd">$2</span>');
+    e=e.replace(/(\$\{[^}]+\}|\$[A-Z_][A-Z0-9_]*)/g,'<span class="var">$1</span>');
+    return e;
+  }).join('\n');
+}
+async function copyText(text){
+  // HTTPS/localhost 등 Clipboard API를 사용할 수 있는 환경
+  if (navigator.clipboard && window.isSecureContext) {
+    await navigator.clipboard.writeText(text);
+    return;
+  }
+
+  // file:// 또는 Clipboard API가 제한된 환경용 fallback
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.setAttribute('readonly', '');
+  ta.style.position = 'fixed';
+  ta.style.left = '-9999px';
+  ta.style.top = '0';
+  document.body.appendChild(ta);
+  ta.focus();
+  ta.select();
+
+  const ok = document.execCommand('copy');
+  document.body.removeChild(ta);
+
+  if (!ok) throw new Error('copy command failed');
+}
+
+document.querySelectorAll('.code-card').forEach(card=>{
+  // 툴팁/명령어 설명 안에도 <code>가 있으므로,
+  // 복사·하이라이트 대상은 반드시 실제 명령어 영역(<pre><code>)으로 한정합니다.
+  const code = card.querySelector('pre > code');
+  if (!code) return;
+
+  highlight(code, card.dataset.lang);
+
+  // 화면 예시처럼 복사 버튼이 없는 code-card도 있으므로 안전하게 건너뜁니다.
+  const button = card.querySelector('.copy');
+  if (!button) return;
+
+  button.addEventListener('click', async ()=>{
+    const original = button.textContent;
+    try {
+      await copyText(code.textContent);
+      button.textContent = '복사됨';
+    } catch (e) {
+      button.textContent = '복사 실패';
+      console.error('Clipboard copy failed:', e);
+    }
+    setTimeout(()=>button.textContent = original, 1200);
+  });
+});
+const boxes=[...document.querySelectorAll('.checklist input')];
+function update(){const done=boxes.filter(x=>x.checked).length;document.querySelector('.progress>span').style.width=(done/boxes.length*100)+'%';document.querySelector('.progress-text').textContent=`${done} / ${boxes.length}`;boxes.forEach((b,i)=>localStorage.setItem('rhelLabCheck'+i,b.checked?'1':'0'));}
+boxes.forEach((b,i)=>{b.checked=localStorage.getItem('rhelLabCheck'+i)==='1';b.addEventListener('change',update)});update();
+document.getElementById('resetChecks').onclick=()=>{boxes.forEach(b=>b.checked=false);update();};
+</script>
+<script>
+(function(){
+  const saved = localStorage.getItem('rhel-lab-theme');
+  const preferred = saved || (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+  setTheme(preferred);
+})();
+function setTheme(theme){
+  document.documentElement.setAttribute('data-theme', theme);
+  try { localStorage.setItem('rhel-lab-theme', theme); } catch(e) {}
+  const dark = document.getElementById('theme-dark');
+  const light = document.getElementById('theme-light');
+  if (dark && light) {
+    dark.classList.toggle('active', theme === 'dark');
+    light.classList.toggle('active', theme === 'light');
+  }
+}
+</script>
+<script>
+document.querySelectorAll('.explain-toggle').forEach(button=>{
+  button.addEventListener('click', ()=>{
+    const panel = document.getElementById(button.getAttribute('aria-controls'));
+    if (!panel) return;
+    const open = !panel.classList.contains('open');
+    panel.classList.toggle('open', open);
+    button.setAttribute('aria-expanded', open ? 'true' : 'false');
+    button.textContent = open ? '설명 닫기' : '명령어 설명';
+  });
+});
+
+document.querySelectorAll('.quick-tip-wrap').forEach(wrap=>{
+  const button = wrap.querySelector('.quick-tip');
+  if (!button) return;
+  button.addEventListener('click', (e)=>{
+    e.stopPropagation();
+    document.querySelectorAll('.quick-tip-wrap.open').forEach(other=>{
+      if (other !== wrap) other.classList.remove('open');
+    });
+    wrap.classList.toggle('open');
+  });
+});
+document.addEventListener('click', ()=>{
+  document.querySelectorAll('.quick-tip-wrap.open').forEach(x=>x.classList.remove('open'));
+});
+</script></body></html>
