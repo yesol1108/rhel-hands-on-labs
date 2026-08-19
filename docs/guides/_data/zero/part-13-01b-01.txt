@@ -1,0 +1,7 @@
+ployment의 이전 bootc deployment로 되돌립니다.</span><span class="tip-item"><b><code>--soft-reboot=required</code></b>soft reboot가 가능한 경우에만 작업을 진행하도록 강제합니다. 조건이 맞지 않으면 full reboot로 자동 대체하지 않습니다.</span><span class="tip-item"><b><code>bootc status --verbose</code></b>현재 부팅된 이미지, staged deployment, image reference와 digest 등 bootc 상태를 자세히 확인합니다.</span></span></span><button aria-controls="explain-28" aria-expanded="false" class="explain-toggle" type="button">명령어 설명</button><button class="copy" type="button">복사</button></div></div><pre><code>sudo bootc rollback --soft-reboot=required --apply
+
+# 재접속 후
+sudo bootc status --verbose
+cat /usr/share/lab-image-stage
+cat /usr/share/lab-userspace-generation
+uname -r</code></pre><div class="command-explain" id="explain-28"><div class="explain-title">필요할 때만 펼쳐보는 명령어 설명</div><dl><dt><code>bootc rollback</code></dt><dd>현재 deployment의 바로 이전 bootc deployment로 되돌립니다.
