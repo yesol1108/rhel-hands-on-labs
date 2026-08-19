@@ -1,0 +1,55 @@
+ser로 다시 접속합니다.</dd></dl></div></div>
+<h4>Windows Command Prompt(CMD) — 변수를 사용하는 경우</h4>
+<div class="code-card" data-lang="cmd"><div class="code-head"><span>Windows CMD</span><div class="code-actions"><span class="quick-tip-wrap"><button aria-label="핵심 명령 빠른 설명" class="quick-tip" type="button">ⓘ</button><span class="quick-tip-pop" role="tooltip"><span class="tip-item"><b><code>ssh-keygen -R</code></b>known_hosts에서 지정한 hostname의 기존 SSH host key만 제거합니다. OS 재설치 직후 새 host key를 다시 등록할 때 사용합니다.</span></span></span><button aria-controls="explain-14" aria-expanded="false" class="explain-toggle" type="button">명령어 설명</button><button class="copy" type="button">복사</button></div></div><pre><code>set LAB_HOST=rhel.65gmj.sandbox1241.opentlc.com
+
+ssh-keygen -R %LAB_HOST%
+ssh lab-user@%LAB_HOST%</code></pre><div class="command-explain" id="explain-14"><div class="explain-title">필요할 때만 펼쳐보는 명령어 설명</div><dl><dt><code>set LAB_HOST=...</code></dt><dd>hostname을 Windows CMD 환경 변수로 저장합니다.</dd><dt><code>ssh-keygen -R %LAB_HOST%</code></dt><dd>해당 hostname의 이전 SSH host key를 제거합니다.</dd><dt><code>ssh lab-user@%LAB_HOST%</code></dt><dd>새 bootc 시스템에 lab-user로 다시 접속합니다.</dd></dl></div></div>
+</div></details>
+<div class="table-scroll"><table class="verify"><thead><tr><th>확인 지점</th><th>정상 기준</th><th>의미</th></tr></thead><tbody>
+<tr><td>SSH Host Key 변경 경고 (<code>REMOTE HOST IDENTIFICATION HAS CHANGED!</code>)</td><td>OS 재설치 직후 발생 가능</td><td>같은 hostname에 대해 로컬 PC가 기억한 이전 SSH key와 새 OS의 SSH key가 달라졌다는 뜻입니다.</td></tr>
+<tr><td>이전 SSH Host Key 삭제 (<code>ssh-keygen -R &lt;hostname&gt;</code>)</td><td><code>Host ... found</code>, <code>known_hosts updated</code>와 비슷한 메시지</td><td>해당 hostname의 이전 key만 제거되었습니다.</td></tr>
+<tr><td>SSH 재접속 (<code>ssh</code>)</td><td><code>The authenticity of host ... can't be established</code>와 새 fingerprint 표시</td><td>새 host key가 아직 로컬에 등록되지 않아 최초 접속처럼 다시 확인하는 단계입니다.</td></tr>
+<tr><td>새 SSH Host Key 등록 (<code>yes</code>)</td><td><code>Permanently added ... to the list of known hosts</code></td><td>새 SSH host key가 <code>known_hosts</code>에 저장됩니다.</td></tr>
+<tr><td>lab-user 로그인 (<code>lab-user</code>)</td><td>Step 2에서 설정한 비밀번호 또는 준비된 SSH 인증으로 로그인 성공</td><td>Hardened Image의 사용자와 SSH 설정이 실제 RHEL 10.2 Image Mode 시스템에서 정상 동작함을 확인합니다.</td></tr>
+</tbody></table></div>
+<div class="callout danger"><strong>OS 재설치 없이 갑자기 경고가 나온 경우</strong><p>
+본인이 OS 재설치, VM 재프로비저닝 또는 호스트 교체를 수행하지 않았는데 <code>REMOTE HOST IDENTIFICATION HAS CHANGED!</code>가 갑자기 발생했다면 바로 이전 key를 삭제하지 않습니다. 먼저 접속 대상 hostname/IP가 맞는지 확인합니다. 이번 실습에서는 바로 앞 단계에서 <code>system-reinstall-bootc</code>를 수행했기 때문에 host key 변경이 예상되는 상황입니다.
+</p></div>
+<p class="mini">경고에 <code>Offending ... key in ...known_hosts:18</code>처럼 줄 번호가 표시되어도 해당 줄을 직접 편집하기보다 <code>ssh-keygen -R &lt;hostname&gt;</code>을 사용하는 편이 간단합니다.</p><h3>3-4. 재접속 후 RHEL 10.2 Image Mode 검증</h3><p>위 단계에서 로컬 PC의 이전 SSH host key를 정리하고 lab-user로 다시 접속한 세션에서 아래 검증을 수행합니다.</p><div class="code-card" data-lang="shell"><div class="code-head"><span>Shell · RHEL 10.2 Image Mode 검증</span><div class="code-actions"><span class="quick-tip-wrap"><button aria-label="핵심 명령 빠른 설명" class="quick-tip" type="button">ⓘ</button><span class="quick-tip-pop" role="tooltip"><span class="tip-item"><b><code>bootc status --verbose</code></b>현재 부팅된 이미지, staged deployment, image reference와 digest 등 bootc 상태를 자세히 확인합니다.</span></span></span><button aria-controls="explain-15" aria-expanded="false" class="explain-toggle" type="button">명령어 설명</button><button class="copy" type="button">복사</button></div></div><pre><code>cat /etc/redhat-release
+sudo bootc status --verbose
+cat /usr/share/lab-image-stage
+cat /usr/share/lab-userspace-generation
+
+printf '\n=== 실행 중 보안 상태 ===\n'
+sestatus | grep 'Current mode'
+sysctl net.ipv4.conf.all.rp_filter
+sysctl net.ipv4.tcp_syncookies
+sysctl kernel.unprivileged_bpf_disabled
+
+printf '\n=== 사용자 / 접속 정보 ===\n'
+id lab-user
+systemctl is-active sshd.service
+
+printf '\n=== 커널 ===\n'
+uname -r
+rpm -q kernel-core</code></pre><div class="command-explain" id="explain-15"><div class="explain-title">필요할 때만 펼쳐보는 명령어 설명</div><dl><dt><code>bootc status --verbose</code></dt><dd>현재 어떤 bootc 이미지와 digest에서 부팅되었는지 상세 상태를 확인합니다.</dd><dt><code>cat /usr/share/lab-image-stage</code></dt><dd>현재 부팅된 이미지가 hardened 단계인지 실습 marker로 확인합니다.</dd><dt><code>sestatus / sysctl</code></dt><dd>SELinux와 sysctl 값이 파일에만 존재하는 것이 아니라 실제 runtime에 적용되었는지 확인합니다.</dd><dt><code>id lab-user / systemctl is-active sshd</code></dt><dd>재설치 후에도 사용자와 SSH 서비스가 실제로 정상 동작하는지 확인합니다.</dd><dt><code>uname -r / rpm -q kernel-core</code></dt><dd>실행 중인 커널과 설치된 커널 패키지가 실습 기준 버전과 일치하는지 확인합니다.</dd></dl></div></div><div class="table-scroll"><table class="verify"><thead><tr><th>검증 항목</th><th>정상 기준</th><th>의미</th></tr></thead><tbody><tr><td>운영체제 버전 (<code>/etc/redhat-release</code>)</td><td>RHEL 10.2</td><td>OS 전환 완료</td></tr><tr><td>현재 bootc 이미지 상태 (<code>bootc status</code>)</td><td>...:hardened</td><td>Quay hardened image에서 boot</td></tr><tr><td>SELinux 실행 상태 (<code>sestatus</code>)</td><td>enforcing</td><td>실행 중 SELinux</td></tr><tr><td>커널 보안 설정 적용 상태 (<code>sysctl</code>)</td><td>1/1/1</td><td>설정 파일뿐 아니라 running kernel에도 적용</td></tr><tr><td>실행 중인 커널 (<code>uname -r</code>)</td><td><code>6.12.0-211.16.1.el10_2.x86_64</code></td><td>실제 kpatch package가 제공되는 kernel로 정상 부팅되었으며 kpatch/soft reboot 비교 기준</td></tr></tbody></table></div><div class="callout ok"><strong>설정 파일 vs Runtime</strong><p>/etc/sysctl.d 파일은 “정의”를, sysctl 명령은 “현재 kernel에 적용된 값”을 검증합니다.</p></div>
+<h3>3-5. 재부팅 후 변수 + Quay 인증 재준비</h3><div class="callout info"><strong>왜 변수를 다시 설정하나요?</strong><p><code>export</code>로 만든 shell 변수는 reboot/SSH 재접속 후 유지되지 않습니다. 따라서 Step 5의 build와 Step 6의 <code>bootc switch</code> 전에 이미지 경로 변수를 다시 구성합니다.</p></div><div class="code-card" data-lang="shell"><div class="code-head"><span>Shell · 변수 재설정 + Image Mode host Quay 인증</span><div class="code-actions"><button aria-controls="explain-16" aria-expanded="false" class="explain-toggle" type="button">명령어 설명</button><button class="copy" type="button">복사</button></div></div><pre><code># reboot/재접속 후 Quay에 다시 로그인합니다.
+sudo podman login quay.io
+
+# 방금 로그인한 Quay Username을 자동으로 가져와 이미지 경로를 다시 구성합니다.
+export QUAY_USER="$(sudo podman login --get-login quay.io)"
+export LAB_REPO="quay.io/${QUAY_USER}/rhel10-cve-lab"
+export HARDENED_IMAGE="${LAB_REPO}:hardened"
+export USERSPACE_IMAGE="${LAB_REPO}:userspace-update"
+
+printf 'Hardened 이미지 : %s\n' "${HARDENED_IMAGE}"
+printf '업데이트 이미지 : %s\n' "${USERSPACE_IMAGE}"
+
+# 이후 bootc switch에서 private Quay 이미지를 pull할 수 있도록 인증을 다시 준비합니다.
+sudo mkdir -p /etc/ostree
+sudo cp /run/containers/0/auth.json /etc/ostree/auth.json
+sudo chmod 600 /etc/ostree/auth.json
+sudo test -s /etc/ostree/auth.json &amp;&amp; echo "bootc auth: OK"</code></pre><div class="command-explain" id="explain-16"><div class="explain-title">필요할 때만 펼쳐보는 명령어 설명</div><dl><dt><code>podman login --get-login quay.io</code></dt><dd>재부팅 후 Quay에 다시 로그인한 뒤 로그인된 Username을 자동으로 가져와 이후 build/switch용 경로를 다시 만듭니다.</dd><dt><code>HARDENED_IMAGE / USERSPACE_IMAGE</code></dt><dd>Step 5와 Step 6에서 사용할 두 tag 경로를 다시 구성합니다.</dd><dt><code>podman login quay.io</code></dt><dd>새 Image Mode host에서 Quay 인증을 다시 생성합니다.</dd><dt><code>/etc/ostree/auth.json</code></dt><dd>bootc가 private registry 이미지를 pull할 수 있도록 인증 파일을 준비합니다.</dd></dl></div></div>
+</section><section id="s4"><div class="section-kicker">STEP 4</div><h2>Kernel CVE 대응 — kpatch</h2><p class="lead">Source Image에 사전 구성된 <code>workshop-rhel10</code> Repository를 사용해 RHSM 등록 없이 실제 kernel live patch를 적용합니다. 기본 실습에서는 Repository/RHSM 상태에 따른 분기 없이 동일한 경로로 진행합니다.</p>
+<div class="callout warn"><strong>지원 조건</strong><p>RHEL 10 kpatch는 RHEL 10.2부터 지원됩니다. 이번 실습은 <code>kernel-6.12.0-211.16.1.el10_2</code>로 고정된 Source Image와 Workshop Repository에서 제공하는 <code>kpatch-patch-6_12_0-211_16_1-1-5.el10_2</code>를 사용해 <code>[enabled]</code> live patch module을 확인합니다. 모든 CVE가 live patch 대상은 아닙니다.</p></div>
+<div class="callout info"><strong>기본 실습의 Repository 구성</strong><p><code>workshop-rhel10</code> Repository 설정은 실습용 Sou
