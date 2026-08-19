@@ -1,0 +1,52 @@
+', e);
+    }
+    setTimeout(()=>button.textContent = original, 1200);
+  });
+});
+const boxes=[...document.querySelectorAll('.checklist input')];
+function update(){const done=boxes.filter(x=>x.checked).length;document.querySelector('.progress>span').style.width=(done/boxes.length*100)+'%';document.querySelector('.progress-text').textContent=`${done} / ${boxes.length}`;boxes.forEach((b,i)=>localStorage.setItem('rhelLabCheck'+i,b.checked?'1':'0'));}
+boxes.forEach((b,i)=>{b.checked=localStorage.getItem('rhelLabCheck'+i)==='1';b.addEventListener('change',update)});update();
+document.getElementById('resetChecks').onclick=()=>{boxes.forEach(b=>b.checked=false);update();};
+</script><script>
+(function(){
+  const saved = localStorage.getItem('rhel-lab-theme');
+  const preferred = saved || (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+  setTheme(preferred);
+})();
+function setTheme(theme){
+  document.documentElement.setAttribute('data-theme', theme);
+  try { localStorage.setItem('rhel-lab-theme', theme); } catch(e) {}
+  const dark = document.getElementById('theme-dark');
+  const light = document.getElementById('theme-light');
+  if (dark && light) {
+    dark.classList.toggle('active', theme === 'dark');
+    light.classList.toggle('active', theme === 'light');
+  }
+}
+</script><script>
+document.querySelectorAll('.explain-toggle').forEach(button=>{
+  button.addEventListener('click', ()=>{
+    const panel = document.getElementById(button.getAttribute('aria-controls'));
+    if (!panel) return;
+    const open = !panel.classList.contains('open');
+    panel.classList.toggle('open', open);
+    button.setAttribute('aria-expanded', open ? 'true' : 'false');
+    button.textContent = open ? '설명 닫기' : '명령어 설명';
+  });
+});
+
+document.querySelectorAll('.quick-tip-wrap').forEach(wrap=>{
+  const button = wrap.querySelector('.quick-tip');
+  if (!button) return;
+  button.addEventListener('click', (e)=>{
+    e.stopPropagation();
+    document.querySelectorAll('.quick-tip-wrap.open').forEach(other=>{
+      if (other !== wrap) other.classList.remove('open');
+    });
+    wrap.classList.toggle('open');
+  });
+});
+document.addEventListener('click', ()=>{
+  document.querySelectorAll('.quick-tip-wrap.open').forEach(x=>x.classList.remove('open'));
+});
+</script></body></html>
