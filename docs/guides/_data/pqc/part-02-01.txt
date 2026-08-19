@@ -1,0 +1,31 @@
+sa_pss_rsae_sha256</code>은 서버 인증이 RSA라는 뜻이고, <code>X25519MLKEM768</code>은 <strong>기존 X25519 + PQC ML-KEM-768</strong>을 함께 사용하는 Hybrid Key Exchange라는 뜻입니다.</p></div></section><section id="s2-pqc"><div class="section-kicker">STEP 8 · OPTIONAL 5 MIN</div><h2>선택 확장 — ML-DSA 전자서명 체험</h2><p class="lead">Step 1의 Hybrid ML-KEM 확인을 완료한 뒤 시간이 남으면 진행합니다. ML-DSA가 PQC 전자서명 알고리즘이라는 점을 파일 서명과 변조 탐지로 확인합니다.</p><h3>2-1. ML-DSA-65 키 생성 및 정상 서명 검증</h3><div class="callout info"><strong>ML-DSA는 무엇을 확인하나요?</strong><p>ML-DSA는 “누가 서명했고, 서명 이후 데이터가 바뀌지 않았는가?”를 확인합니다. 데이터를 숨기는 암호화가 아니라 <strong>신뢰성과 무결성을 증명하는 전자서명</strong>입니다.</p></div><div class="code-card" data-lang="shell"><div class="code-head"><span>Shell · ML-DSA-65 서명 및 검증</span><div class="code-actions"><button aria-controls="explain-mldsa" aria-expanded="false" class="explain-toggle" type="button">명령어 설명</button><button class="copy" type="button">복사</button></div></div><pre><code>mkdir -p /root/pqc-lab
+cd /root/pqc-lab
+
+printf 'Hello RHEL 10 PQC\n' &gt; message.txt
+
+openssl genpkey \
+  -algorithm mldsa65 \
+  -out mldsa65-private.pem
+
+openssl pkey \
+  -in mldsa65-private.pem \
+  -pubout \
+  -out mldsa65-public.pem
+
+openssl dgst \
+  -sign mldsa65-private.pem \
+  -out message.sig \
+  message.txt
+
+openssl dgst \
+  -verify mldsa65-public.pem \
+  -signature message.sig \
+  message.txt</code></pre><div class="command-explain" id="explain-mldsa"><div class="explain-title">필요할 때만 펼쳐보는 명령어 설명</div><dl><dt><code>openssl genpkey -algorithm mldsa65</code></dt><dd>ML-DSA-65 개인키를 생성합니다.</dd><dt><code>openssl pkey ... -pubout</code></dt><dd>개인키에서 검증용 공개키를 추출합니다.</dd><dt><code>openssl dgst -sign</code></dt><dd>개인키로 <code>message.txt</code>에 전자서명합니다.</dd><dt><code>openssl dgst -verify</code></dt><dd>공개키로 서명이 유효하고 파일이 변경되지 않았는지 검증합니다.</dd></dl></div></div><div class="code-card" data-lang="text"><div class="code-head"><span>정상 결과</span></div><pre><code>Verified OK</code></pre></div><h3>2-2. 파일 변경 후 검증 실패 확인</h3><div class="code-card" data-lang="shell"><div class="code-head"><span>Shell · 변조 탐지 확인</span><div class="code-actions"><button aria-controls="explain-mldsa-tamper" aria-expanded="false" class="explain-toggle" type="button">명령어 설명</button><button class="copy" type="button">복사</button></div></div><pre><code>cp message.txt message-original.txt
+printf 'Modified after signing\n' &gt;&gt; message.txt
+
+openssl dgst \
+  -verify mldsa65-public.pem \
+  -signature message.sig \
+  message.txt
+
+mv -f message-original.txt message.txt</code></pre><div class="command-explain" id="explain-mldsa-tamper"><div class="explain-title">필요할 때만 펼쳐보는 명령어 설명</div><dl><dt><code>printf ... &gt;&gt; message.txt</code></dt><dd>서명된 파일에 내용을 추가하여 서명 이후 변경 상황을 만듭니다.</dd><dt><code>openssl dgst -verify</code></dt><dd>기존 서명과 변경된 파일이 일치하지 않아 검증이 실패하는지 확인합니다.</dd><dt><code>mv -f message-original.txt message.txt</code></dt><dd>테스트 후 원본 파일을 복원합니다.</dd></dl></div></div><div class="callout ok"><strong>ML-DSA에서 집중할 결과</strong><p>원본 파일에서는 <code>Verified OK</code>, 변경된 파일에서
