@@ -1,0 +1,41 @@
+name: Build verified live workshop guides
+
+on:
+  push:
+    branches:
+      - fix-live-guides-v4
+    paths:
+      - '.github/workflows/build-live-guides.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out branch
+        uses: actions/checkout@v4
+
+      - name: Assemble and verify guides
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat docs/guides/_data/zero/part-*.txt > docs/guides/zero-cve.html
+          cat docs/guides/_data/pqc/part-*.txt > docs/guides/pqc-additional.html
+
+          echo '0bc5f54a5d8698fbccaf64cde20662290937be80a1165031e584c58a3431731c  docs/guides/zero-cve.html' | sha256sum --check
+          echo 'd40b180dcd5a3911b6124e91d9e6c4fd6161997c9c02da1a48357830bb0adf51  docs/guides/pqc-additional.html' | sha256sum --check
+
+          grep -q 'RHEL 10.0 → 10.2 Image Mode Hands-on + CVE Verification' docs/guides/zero-cve.html
+          grep -q 'RHEL 10.2 PQC 추가 실습' docs/guides/pqc-additional.html
+
+      - name: Commit verified HTML
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add docs/guides/zero-cve.html docs/guides/pqc-additional.html
+          git commit -m 'Publish verified workshop guide HTML'
+          git push origin HEAD:fix-live-guides-v4
