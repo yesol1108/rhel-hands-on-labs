@@ -4,4 +4,4 @@ ployment의 이전 bootc deployment로 되돌립니다.</span><span class="tip-i
 sudo bootc status --verbose
 cat /usr/share/lab-image-stage
 cat /usr/share/lab-userspace-generation
-uname -r</code></pre><div class="command-explain" id="explain-28"><div class="explain-title">필요할 때만 펼쳐보는 명령어 설명</div><dl><dt><code>bootc rollback</code></dt><dd>현재 deployment의 바로 이전 bootc deployment로 되돌립니다.
+uname -r</code></pre><div class="command-explain" id="explain-28"><div class="explain-title">필요할 때만 펼쳐보는 명령어 설명</div><dl><dt><code>bootc rollback</code></dt><dd>현재 deployment의 바로 이전 bootc deployment로 되돌립니다.</
