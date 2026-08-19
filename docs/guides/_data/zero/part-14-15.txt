@@ -1,0 +1,113 @@
+dd><dt><code>--soft-reboot=required --apply</code></dt><dd>가능한 경우 soft reboot 방식으로 rollback을 즉시 적용하고, 조건이 맞지 않으면 임의로 full reboot하지 않도록 합니다.</dd><dt><code>bootc status / marker</code></dt><dd>재접속 후 실제로 이전 이미지 단계로 돌아왔는지 상태와 marker로 확인합니다.</dd><dt><code>uname -r</code></dt><dd>rollback 이후 running kernel 상태도 함께 확인합니다.</dd></dl></div></div>
+</div></details><h3>8-2. 문제 해결</h3><div class="table-scroll"><table class="verify"><thead><tr><th>검증 항목</th><th>정상 기준</th><th>의미</th></tr></thead><tbody><tr><td>stage 1 requires a FROM instruction</td><td>Containerfile 깨짐</td><td>nl -ba / grep ^FROM 후 재작성</td></tr><tr><td>repository not found</td><td>앞 build 실패/이름 불일치</td><td>build→images→push로 단계 분리</td></tr><tr><td>Quay가 빈 것처럼 보임</td><td>repository/tag 혼동</td><td>Tags 메뉴에서 hardened/userspace-update 확인</td></tr><tr><td>manifest unknown / :latest pull 실패</td><td>Source image tag 생략 또는 존재하지 않는 tag</td><td><code>quay.io/yeslee/rhel10-bootc:10.2</code>처럼 실제 존재하는 tag를 명시하고 먼저 <code>podman pull</code>로 검증</td></tr><tr><td>unauthorized</td><td>Quay auth 누락</td><td>podman login + /etc/ostree/auth.json</td></tr><tr><td>SSH Host Key 변경 경고 (<code>REMOTE HOST IDENTIFICATION HAS CHANGED!</code>)</td><td>의도한 OS 교체 직후라면 정상</td><td>Windows / macOS / Linux에서 <code>ssh-keygen -R &lt;OpenTLC-호스트명&gt;</code> 실행 → 재접속 → 새 fingerprint 확인 후 <code>yes</code>. 재설치 없이 발생했다면 먼저 원인을 확인.</td></tr><tr><td>kpatch list가 비어 있음</td><td>이번 실습에서는 비정상</td><td><code>dnf repolist</code>에서 <code>workshop-rhel10</code> 활성 여부를 확인하고, <code>repoquery</code>로 1-5 package 제공 여부, <code>rpm -qa</code>로 설치 여부, <code>uname -r</code>로 대상 kernel 일치 여부를 확인</td></tr><tr><td>soft reboot required 실패</td><td>kernel/low-level 변경</td><td>kernel-core 동일성부터 재확인</td></tr><tr><td>변수명이나 리다이렉션 앞에 불필요한 backslash가 보임</td><td>문서 포맷용 escape가 실제 코드에 섞임</td><td>2-2의 Containerfile 전체 블록을 다시 복사하고, 바로 아래 “Containerfile 자체 검증” 결과를 확인</td></tr></tbody></table></div>
+</section><section id="check"><div class="section-kicker">FINAL</div><h2>최종 검증 체크리스트</h2><div class="progress"><span></span></div><div class="mini progress-text">0 / 13</div><div class="checklist"><label><input type="checkbox"/>출발 host가 RHEL 10.0 Package Mode임을 확인했다.</label><label><input type="checkbox"/>quay.io/yeslee/rhel10-bootc:10.2가 실제 RHEL 10.2인지 확인했다.</label><label><input type="checkbox"/>참가자가 :hardened Containerfile을 직접 작성/build/push했다.</label><label><input type="checkbox"/>lab-user, SELinux, sysctl, kpatch 도구를 image 내부에서 검증했다.</label><label><input type="checkbox"/>RHEL 10.2 Image Mode 전환 후 runtime hardening을 검증했다.</label><label><input type="checkbox"/>OS 전환 후 로컬 PC의 이전 SSH host key를 정리하고 새 key로 lab-user 재접속을 확인했다.</label><label><input type="checkbox"/>kpatch: workshop-rhel10 Repository에서 대상 patch를 확인하고 [enabled] Live Patch를 적용했다.</label><label><input type="checkbox"/>같은 repository 아래 hardened/userspace-update 두 tag를 확인했다.</label><label><input type="checkbox"/>두 tag의 kernel-core 동일성을 확인했다.</label><label><input type="checkbox"/>OpenSSL/glibc + tree + generation으로 userspace 변화를 확인했다.</label><label><input type="checkbox"/>SoftRebootsCount 증가 + uname -r 동일을 확인했다.</label><label><input type="checkbox"/>Containerfile이 한 블록으로 생성되고 Markdown escape artifact가 없음을 확인했다.</label><label><input type="checkbox"/>선택: dnf updateinfo 또는 Red Hat Lightspeed로 CVE 검증 방법을 확인했다.</label></div></section><section id="refs"><div class="section-kicker">REF</div><h2>참고 문서</h2><ul class="ref-list"><li><b>RHEL Image Mode overview / RHEL bootc</b><br/><a href="https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/10/html/using_image_mode_for_rhel_to_build_deploy_and_manage_operating_systems/introducing-image-mode-for-rhel" rel="noreferrer" target="_blank">https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/10/html/using_image_mode_for_rhel_to_build_deploy_and_manage_operating_systems/introducing-image-mode-for-rhel</a></li><li><b>system-reinstall-bootc deployment</b><br/><a href="https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/10/html/using_image_mode_for_rhel_to_build_deploy_and_manage_operating_systems/deploying-the-rhel-bootc-images" rel="noreferrer" target="_blank">https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/10/html/using_image_mode_for_rhel_to_build_deploy_and_manage_operating_systems/deploying-the-rhel-bootc-images</a></li><li><b>Private registry pull secrets</b><br/><a href="https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/10/html/using_image_mode_for_rhel_to_build_deploy_and_manage_operating_systems/managing-users-groups-ssh-keys-and-secrets-in-image-mode-for-rhel" rel="noreferrer" target="_blank">https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/10/html/using_image_mode_for_rhel_to_build_deploy_and_manage_operating_systems/managing-users-groups-ssh-keys-and-secrets-in-image-mode-for-rhel</a></li><li><b>DNF / transient changes in Image Mode</b><br/><a href="https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/10/html/using_image_mode_for_rhel_to_build_deploy_and_manage_operating_systems/system-configuration" rel="noreferrer" target="_blank">https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/10/html/using_image_mode_for_rhel_to_build_deploy_and_manage_operating_systems/system-configuration</a></li><li><b>systemd soft reboot for bootc</b><br/><a href="https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/10/html/using_image_mode_for_rhel_to_build_deploy_and_manage_operating_systems/performing-soft-reboots-to-rhel-bootc-images" rel="noreferrer" target="_blank">https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/10/html/using_image_mode_for_rhel_to_build_deploy_and_manage_operating_systems/performing-soft-reboots-to-rhel-bootc-images</a></li><li><b>RHEL 10 kernel live patching / kpatch</b><br/><a href="https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/10/html/managing_monitoring_and_updating_the_kernel/applying-patches-with-kernel-live-patching" rel="noreferrer" target="_blank">https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/10/html/managing_monitoring_and_updating_the_kernel/applying-patches-with-kernel-live-patching</a></li><li><b>RHEL 10 Release Notes — CVE OVAL v2 feed no longer provided</b><br/><a href="https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/10/html/10.0_release_notes/removed-features" rel="noreferrer" target="_blank">https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/10/html/10.0_release_notes/removed-features</a></li><li><b>RHEL 10 Security Hardening — OpenSCAP configuration compliance</b><br/><a href="https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/10/html/security_hardening/scanning-the-system-for-configuration-compliance" rel="noreferrer" target="_blank">https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/10/html/security_hardening/scanning-the-system-for-configuration-compliance</a></li><li><b>RHEL 10 Security Updates — dnf updateinfo</b><br/><a href="https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/10/html/risk_reduction_and_recovery_operations/managing-and-monitoring-security-updates" rel="noreferrer" target="_blank">https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/10/html/risk_reduction_and_recovery_operations/managing-and-monitoring-security-updates</a></li><li><b>Red Hat Lightspeed — RHEL 10 system registration</b><br/><a href="https://docs.redhat.com/en/documentation/red_hat_lightspeed/1-latest/html/registering_rhel_systems_and_configuring_client_tools_with_red_hat_lightspeed/connecting-and-registering-systems" rel="noreferrer" target="_blank">https://docs.redhat.com/en/documentation/red_hat_lightspeed/1-latest/html/registering_rhel_systems_and_configuring_client_tools_with_red_hat_lightspeed/connecting-and-registering-systems</a></li><li><b>Red Hat Lightspeed Vulnerability Service</b><br/><a href="https://docs.redhat.com/en/documentation/red_hat_lightspeed/1-latest/html/assessing_and_monitoring_security_vulnerabilities_on_rhel_systems/vuln-overview_vulnerability-assess" rel="noreferrer" target="_blank">https://docs.redhat.com/en/documentation/red_hat_lightspeed/1-latest/html/assessing_and_monitoring_security_vulnerabilities_on_rhel_systems/vuln-overview_vulnerability-assess</a></li></ul></section><div class="toolbar"><button onclick="window.print()">인쇄</button><button id="resetChecks">체크 초기화</button></div>
+</main></div><script>
+function escapeHtml(s){return s.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));}
+function highlight(code,lang){
+  let lines=code.textContent.split('\n');
+  code.innerHTML=lines.map(line=>{
+    let e=escapeHtml(line);
+    if(/^\s*#/.test(line)) return '<span class="com">'+e+'</span>';
+    if(lang==='containerfile') e=e.replace(/^(FROM|ARG|RUN|COPY|LABEL|CMD|ENV|WORKDIR)\b/,'<span class="kw">$1</span>');
+    else e=e.replace(/^(\s*)(sudo|export|printf|cat|echo|read|unset|rpm|uname|systemctl|sysctl|mkdir|grep)\b/,'$1<span class="cmd">$2</span>');
+    e=e.replace(/(\$\{[^}]+\}|\$[A-Z_][A-Z0-9_]*)/g,'<span class="var">$1</span>');
+    return e;
+  }).join('\n');
+}
+async function copyText(text){
+  // HTTPS/localhost 등 Clipboard API를 사용할 수 있는 환경
+  if (navigator.clipboard && window.isSecureContext) {
+    await navigator.clipboard.writeText(text);
+    return;
+  }
+
+  // file:// 또는 Clipboard API가 제한된 환경용 fallback
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.setAttribute('readonly', '');
+  ta.style.position = 'fixed';
+  ta.style.left = '-9999px';
+  ta.style.top = '0';
+  document.body.appendChild(ta);
+  ta.focus();
+  ta.select();
+
+  const ok = document.execCommand('copy');
+  document.body.removeChild(ta);
+
+  if (!ok) throw new Error('copy command failed');
+}
+
+document.querySelectorAll('.code-card').forEach(card=>{
+  // 툴팁/명령어 설명 안에도 <code>가 있으므로,
+  // 복사·하이라이트 대상은 반드시 실제 명령어 영역(<pre><code>)으로 한정합니다.
+  const code = card.querySelector('pre > code');
+  if (!code) return;
+
+  highlight(code, card.dataset.lang);
+
+  // 화면 예시처럼 복사 버튼이 없는 code-card도 있으므로 안전하게 건너뜁니다.
+  const button = card.querySelector('.copy');
+  if (!button) return;
+
+  button.addEventListener('click', async ()=>{
+    const original = button.textContent;
+    try {
+      await copyText(code.textContent);
+      button.textContent = '복사됨';
+    } catch (e) {
+      button.textContent = '복사 실패';
+      console.error('Clipboard copy failed:', e);
+    }
+    setTimeout(()=>button.textContent = original, 1200);
+  });
+});
+const boxes=[...document.querySelectorAll('.checklist input')];
+function update(){const done=boxes.filter(x=>x.checked).length;document.querySelector('.progress>span').style.width=(done/boxes.length*100)+'%';document.querySelector('.progress-text').textContent=`${done} / ${boxes.length}`;boxes.forEach((b,i)=>localStorage.setItem('rhelLabCheck'+i,b.checked?'1':'0'));}
+boxes.forEach((b,i)=>{b.checked=localStorage.getItem('rhelLabCheck'+i)==='1';b.addEventListener('change',update)});update();
+document.getElementById('resetChecks').onclick=()=>{boxes.forEach(b=>b.checked=false);update();};
+</script>
+<script>
+(function(){
+  const saved = localStorage.getItem('rhel-lab-theme');
+  const preferred = saved || (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+  setTheme(preferred);
+})();
+function setTheme(theme){
+  document.documentElement.setAttribute('data-theme', theme);
+  try { localStorage.setItem('rhel-lab-theme', theme); } catch(e) {}
+  const dark = document.getElementById('theme-dark');
+  const light = document.getElementById('theme-light');
+  if (dark && light) {
+    dark.classList.toggle('active', theme === 'dark');
+    light.classList.toggle('active', theme === 'light');
+  }
+}
+</script>
+<script>
+document.querySelectorAll('.explain-toggle').forEach(button=>{
+  button.addEventListener('click', ()=>{
+    const panel = document.getElementById(button.getAttribute('aria-controls'));
+    if (!panel) return;
+    const open = !panel.classList.contains('open');
+    panel.classList.toggle('open', open);
+    button.setAttribute('aria-expanded', open ? 'true' : 'false');
+    button.textContent = open ? '설명 닫기' : '명령어 설명';
+  });
+});
+
+document.querySelectorAll('.quick-tip-wrap').forEach(wrap=>{
+  const button = wrap.querySelector('.quick-tip');
+  if (!button) return;
+  button.addEventListener('click', (e)=>{
+    e.stopPropagation();
+    document.querySelectorAll('.quick-tip-wrap.open').forEach(other=>{
+      if (other !== wrap) other.classList.remove('open');
+    });
+    wrap.classList.toggle('open');
+  });
+});
+document.addEventListener('click', ()=>{
+  document.querySelectorAll('.quick-tip-wrap.open').forEach(x=>x.classList.remove('open'));
+});
+</script></body></html>
