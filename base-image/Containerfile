@@ -1,0 +1,46 @@
+# ------------------------------------------------------------
+# 실습용 Source Image: workshop-rhel10 저장소를 이미지 안에 내장
+#
+# 원격 repo 서버(OpenShift route 등) 없이 Step 1~6을 진행할 수 있도록
+# 필요한 RPM만 /usr/share/workshop-repo 에 넣고 file:// 저장소로 등록합니다.
+#
+# 빌드 호스트는 RHSM에 등록된 RHEL 호스트여야 합니다.
+# (podman build가 호스트 구독을 container mode로 사용해 Red Hat CDN에서 RPM을 받음)
+#
+# 직접 실행하지 말고 build-base-image.sh 를 사용하세요.
+# ------------------------------------------------------------
+ARG BASE_IMAGE
+
+# ---------- 1단계: 필요한 RPM 수집 ----------
+FROM ${BASE_IMAGE} AS collector
+COPY collect-rpms.sh /tmp/collect-rpms.sh
+# 직접 준비한 RPM(예: kpatch-patch)이 있으면 extra-rpms/ 에 넣어두면 함께 포함됩니다.
+COPY extra-rpms/ /tmp/extra-rpms/
+RUN bash /tmp/collect-rpms.sh
+
+# ---------- 2단계: 원본 이미지 + 내장 저장소 ----------
+FROM ${BASE_IMAGE}
+
+# 기존 원격 workshop-rhel10 저장소 설정 제거
+RUN grep -l '^\[workshop-rhel10\]' /etc/yum.repos.d/*.repo 2>/dev/null \
+      | xargs -r rm -f
+
+COPY --from=collector /workshop-repo /usr/share/workshop-repo
+
+RUN printf '%s\n' \
+      '[workshop-rhel10]' \
+      'name=RHEL 10.2 Workshop Repository' \
+      'baseurl=file:///usr/share/workshop-repo' \
+      'enabled=1' \
+      'gpgcheck=1' \
+      'gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-redhat-release' \
+      > /etc/yum.repos.d/workshop-rhel10.repo
+
+# 내장 저장소만으로 실습 패키지를 찾을 수 있는지 빌드 시점에 검증
+RUN dnf makecache --disablerepo='*' --enablerepo=workshop-rhel10 \
+    && dnf repoquery --disablerepo='*' --enablerepo=workshop-rhel10 \
+         rhc insights-client kpatch kpatch-dnf tree 'kpatch-patch-6_12_0-211_16_1*' \
+    && rpm -q kernel-core | grep -q '6.12.0-211.16.1.el10_2' \
+    && dnf clean all
+
+RUN bootc container lint

@@ -119,26 +119,70 @@ command -v system-reinstall-bootc
 
 df -h /</code></pre><div class="command-explain" id="explain-1"><div class="explain-title">필요할 때만 펼쳐보는 명령어 설명</div><dl><dt><code>cat /etc/redhat-release</code></dt><dd>현재 OS가 실습 출발점인 RHEL 10.0인지 확인합니다.</dd><dt><code>uname -r</code></dt><dd>현재 실행 중인 Linux kernel 버전을 확인합니다.</dd><dt><code>command -v podman</code></dt><dd>Podman이 설치되어 있고 실행 가능한지 확인합니다.</dd><dt><code>system-reinstall-bootc 확인/설치</code></dt><dd>새 환경에서 도구가 없으면 DNF로 설치한 뒤 경로를 다시 확인합니다.</dd><dt><code>df -h /</code></dt><dd>이미지 pull/build 및 OS 전환에 필요한 root filesystem 여유 공간을 확인합니다.</dd></dl></div></div><div class="table-scroll"><table class="verify"><thead><tr><th>검증 항목</th><th>정상 기준</th><th>의미</th></tr></thead><tbody><tr><td>운영체제 버전 (<code>/etc/redhat-release</code>)</td><td>RHEL 10.0 (Coughlan)</td><td>아직 Package Mode Shared 환경</td></tr><tr><td>Image Mode 전환 도구 (<code>system-reinstall-bootc</code>)</td><td>경로 출력 (없으면 자동 설치)</td><td>새 RHEL 10.0 환경에서도 OS 전환 도구를 준비</td></tr><tr><td>디스크 여유 공간 (<code>df -h /</code>)</td><td>충분한 여유 공간</td><td>image pull/install용 공간 확인</td></tr></tbody></table></div>
 <h3>1-2. Quay repository 준비 + 로그인</h3>
-<div class="callout warn"><strong>먼저 Quay repository를 생성합니다.</strong><p>Quay.io에서 본인 계정 아래 <code>rhel10-cve-lab</code> repository를 생성한 뒤 아래 명령을 진행합니다. Quay 로그인 시 <strong>repository namespace로 사용하는 Quay Username</strong>으로 로그인하면, 아래 명령이 로그인 정보를 자동으로 가져옵니다.</p></div>
-<div class="code-card" data-lang="shell"><div class="code-head"><span>Shell · Quay 로그인 + 변수</span><div class="code-actions"><button aria-controls="explain-2" aria-expanded="false" class="explain-toggle" type="button">명령어 설명</button><button class="copy" type="button">복사</button></div></div><pre><code>sudo podman login quay.io
+<div class="callout warn"><strong>먼저 Quay repository를 생성합니다.</strong><p>Quay.io에서 본인 계정 아래 <code>rhel10-cve-lab</code> repository를 생성한 뒤 아래 명령을 진행합니다. Quay 로그인 시 <strong>repository namespace로 사용하는 Quay Username</strong>으로 로그인하면, 아래 명령이 로그인 정보를 자동으로 가져옵니다.</p></div><div class="callout danger"><strong>CLI용 Quay 비밀번호를 먼저 확인합니다.</strong><p>Red Hat 계정(SSO)으로 Quay.io 웹에 로그인하는 경우, 그 비밀번호로는 <code>podman login</code>이 되지 않을 수 있습니다. 이때는 Quay.io의 <strong>Account Settings에서 계정 비밀번호를 설정(변경)</strong>한 뒤, 그 비밀번호로 아래 로그인을 진행합니다. <code>invalid username/password</code>가 나오면 대부분 이 단계를 하지 않은 경우입니다.</p></div>
+<div class="code-card" data-lang="shell"><div class="code-head"><span>Shell · Quay 로그인 + 변수</span><div class="code-actions"><button aria-controls="explain-2" aria-expanded="false" class="explain-toggle" type="button">명령어 설명</button><button class="copy" type="button">복사</button></div></div><pre><code># Quay 로그인 - 성공할 때까지 최대 3번 시도합니다.
+QUAY_LOGIN_OK=no
+for TRY in 1 2 3; do
+  if sudo podman login quay.io; then
+    QUAY_LOGIN_OK=yes
+    break
+  fi
+  echo "&gt;&gt;&gt; Quay 로그인 실패 (${TRY}/3) - Username/비밀번호를 다시 입력하세요."
+done
 
-# 방금 로그인한 Quay Username을 자동으로 가져옵니다.
-export QUAY_USER="$(sudo podman login --get-login quay.io)"
+# 실패한 이전 값이 남지 않도록 먼저 정리합니다.
+unset QUAY_USER SOURCE_BOOTC_IMAGE LAB_REPO HARDENED_IMAGE USERSPACE_IMAGE
+rm -f ~/.lab-env
 
-export SOURCE_BOOTC_IMAGE="quay.io/yeslee/rhel10-bootc:10.2"
-export LAB_REPO="quay.io/${QUAY_USER}/rhel10-cve-lab"
-export HARDENED_IMAGE="${LAB_REPO}:hardened"
-export USERSPACE_IMAGE="${LAB_REPO}:userspace-update"
+if [ "${QUAY_LOGIN_OK}" != "yes" ]; then
+  echo "################################################"
+  echo "# FAIL: Quay 로그인 실패 - 다음 단계로 진행하지 마세요."
+  echo "#  invalid username/password 인 경우:"
+  echo "#   Quay.io &gt; Account Settings 에서 비밀번호를 설정(변경)한 뒤"
+  echo "#   이 블록을 다시 실행하세요."
+  echo "################################################"
+else
+  # 방금 로그인한 Quay Username을 자동으로 가져옵니다.
+  export QUAY_USER="$(sudo podman login --get-login quay.io 2&gt;/dev/null)"
 
-printf '원본 이미지      : %s\n' "${SOURCE_BOOTC_IMAGE}"
-printf 'Hardened 이미지  : %s\n' "${HARDENED_IMAGE}"
-printf '업데이트 이미지  : %s\n' "${USERSPACE_IMAGE}"</code></pre><div class="command-explain" id="explain-2"><div class="explain-title">필요할 때만 펼쳐보는 명령어 설명</div><dl><dt><code>sudo podman login quay.io</code></dt><dd>Quay push를 위해 root Podman 인증 정보를 준비합니다.</dd><dt><code>podman login --get-login quay.io</code></dt><dd>방금 로그인한 Quay Username을 자동으로 가져와 <code>QUAY_USER</code> 변수에 저장합니다.</dd><dt><code>LAB_REPO</code></dt><dd>본인 Quay 계정 아래 미리 생성한 <code>rhel10-cve-lab</code> repository 경로를 구성합니다.</dd><dt><code>HARDENED_IMAGE / USERSPACE_IMAGE</code></dt><dd>같은 repository에서 두 단계를 tag로 구분합니다.</dd></dl></div></div><div class="table-scroll"><table class="verify"><thead><tr><th>검증 항목</th><th>정상 기준</th><th>의미</th></tr></thead><tbody><tr><td>원본 bootc 이미지 (<code>SOURCE_BOOTC_IMAGE</code>)</td><td>quay.io/yeslee/rhel10-bootc:10.2</td><td>RHEL 10.2 source bootc image · kpatch 실습용 kernel 6.12.0-211.16.1.el10_2 사전 고정</td></tr><tr><td>Hardened 이미지 (<code>HARDENED_IMAGE</code>)</td><td>quay.io/&lt;로그인한 Quay Username&gt;/rhel10-cve-lab:hardened</td><td>초기 보안 강화 tag</td></tr><tr><td>Userspace 업데이트 이미지 (<code>USERSPACE_IMAGE</code>)</td><td>quay.io/&lt;로그인한 Quay Username&gt;/rhel10-cve-lab:userspace-update</td><td>userspace 변경 tag</td></tr></tbody></table></div></section><section id="s2"><div class="section-kicker">STEP 2</div><h2>Hardened Image 직접 생성</h2><p class="lead">사전 검증된 RHEL 10.2 bootc source image를 기반으로, 서버 설치 후 수동 보안 설정을 하는 대신 보안 설정이 포함된 OS image 자체를 참가자가 만듭니다.</p>
-<h3>2-1. lab-user 비밀번호 hash</h3><div class="code-card" data-lang="shell"><div class="code-head"><span>Shell · password hash</span><div class="code-actions"><button aria-controls="explain-3" aria-expanded="false" class="explain-toggle" type="button">명령어 설명</button><button class="copy" type="button">복사</button></div></div><pre><code>read -s -p "새 bootc 시스템에서 사용할 lab-user 비밀번호: " LAB_PASSWORD
-echo
-LAB_PASSWORD_HASH=$(openssl passwd -6 "${LAB_PASSWORD}")
-unset LAB_PASSWORD
-echo "Password hash length: ${#LAB_PASSWORD_HASH}"</code></pre><div class="command-explain" id="explain-3"><div class="explain-title">필요할 때만 펼쳐보는 명령어 설명</div><dl><dt><code>read -s -p ...</code></dt><dd>비밀번호를 화면에 표시하지 않고 입력받아 LAB_PASSWORD 변수에 임시 저장합니다.</dd><dt><code>openssl passwd -6</code></dt><dd>입력한 비밀번호를 SHA-512 crypt 형식의 해시로 변환합니다. 평문 비밀번호를 이미지에 직접 넣지 않기 위한 단계입니다.</dd><dt><code>unset LAB_PASSWORD</code></dt><dd>해시 생성 후 평문 비밀번호 변수를 현재 셸에서 즉시 제거합니다.</dd><dt><code>${#LAB_PASSWORD_HASH}</code></dt><dd>해시 문자열이 비어 있지 않은지 길이만 확인합니다. 실제 해시 값은 화면에 출력하지 않습니다.</dd></dl></div></div><div class="callout warn"><strong>운영 환경 주의</strong><p>실습에서는 단순화를 위해 hash를 build ARG로 전달합니다. 운영에서는 SSH key/build secret/systemd credential 같은 방법을 고려합니다.</p></div>
-<div class="callout info"><strong>실습용 Source Image</strong><p><code>quay.io/yeslee/rhel10-bootc:10.2</code>에는 kpatch 실습에 사용할 <code>kernel-6.12.0-211.16.1.el10_2</code>가 사전에 고정되어 있고, 기본 실습에 필요한 패키지를 제공하는 <code>workshop-rhel10</code> DNF Repository 설정도 포함되어 있습니다. 따라서 Step 1~6에서는 참가자가 RHSM을 별도로 등록할 필요가 없습니다. 참가자는 해당 base image를 기반으로 Hardening과 Image Mode 업데이트 흐름에 집중합니다.</p></div><h3>2-2. Hardened Containerfile</h3><div class="code-card" data-lang="containerfile"><div class="code-head"><span>Containerfile · :hardened 전체</span><div class="code-actions"><span class="quick-tip-wrap"><button aria-label="핵심 명령 빠른 설명" class="quick-tip" type="button">ⓘ</button><span class="quick-tip-pop" role="tooltip"><span class="tip-item"><b><code>bootc container lint</code></b>컨테이너가 bootc OS 이미지로 사용할 수 있는 기본 구조를 충족하는지 검사합니다.</span></span></span><button aria-controls="explain-4" aria-expanded="false" class="explain-toggle" type="button">명령어 설명</button><button class="copy" type="button">복사</button></div></div><pre><code>cat &lt;&lt;'EOF' &gt; Containerfile.hardened
+  if [ -z "${QUAY_USER}" ]; then
+    echo "################################################"
+    echo "# FAIL: Quay 로그인 정보를 가져오지 못했습니다."
+    echo "#       이 블록을 다시 실행하세요."
+    echo "################################################"
+  elif [[ "${QUAY_USER}" == *+* ]]; then
+    echo "################################################"
+    echo "# FAIL: robot 계정(${QUAY_USER})으로 로그인했습니다."
+    echo "#       본인 Quay Username으로 다시 로그인하세요."
+    echo "################################################"
+    unset QUAY_USER
+  else
+    export SOURCE_BOOTC_IMAGE="quay.io/yeslee/rhel10-bootc:10.2"
+    export LAB_REPO="quay.io/${QUAY_USER}/rhel10-cve-lab"
+    export HARDENED_IMAGE="${LAB_REPO}:hardened"
+    export USERSPACE_IMAGE="${LAB_REPO}:userspace-update"
+
+    # SSH가 끊겨도 'source ~/.lab-env' 한 줄로 변수를 복구할 수 있도록 저장
+    cat &gt; ~/.lab-env &lt;&lt;ENVEOF
+export QUAY_USER="${QUAY_USER}"
+export SOURCE_BOOTC_IMAGE="${SOURCE_BOOTC_IMAGE}"
+export LAB_REPO="${LAB_REPO}"
+export HARDENED_IMAGE="${HARDENED_IMAGE}"
+export USERSPACE_IMAGE="${USERSPACE_IMAGE}"
+ENVEOF
+
+    echo "################################################"
+    echo "# OK: Quay 로그인 완료 (${QUAY_USER})"
+    echo "################################################"
+    printf '원본 이미지      : %s\n' "${SOURCE_BOOTC_IMAGE}"
+    printf 'Hardened 이미지  : %s\n' "${HARDENED_IMAGE}"
+    printf '업데이트 이미지  : %s\n' "${USERSPACE_IMAGE}"
+    echo
+    echo "확인: Quay.io에 ${QUAY_USER}/rhel10-cve-lab repository가 생성되어 있어야 합니다."
+  fi
+fi</code></pre><div class="command-explain" id="explain-2"><div class="explain-title">필요할 때만 펼쳐보는 명령어 설명</div><dl><dt><code>for TRY in 1 2 3 / podman login</code></dt><dd>Quay push를 위해 root Podman 인증 정보를 준비합니다. 로그인이 실패하면 최대 3번까지 다시 입력받고, 끝내 실패하면 FAIL을 표시하며 이미지 변수를 만들지 않습니다.</dd><dt><code>podman login --get-login quay.io</code></dt><dd>방금 로그인한 Quay Username을 자동으로 가져와 <code>QUAY_USER</code> 변수에 저장합니다. 값이 비어 있거나 robot 계정(<code>user+robot</code>)이면 FAIL을 표시하고 변수를 만들지 않습니다.</dd><dt><code>LAB_REPO</code></dt><dd>본인 Quay 계정 아래 미리 생성한 <code>rhel10-cve-lab</code> repository 경로를 구성합니다.</dd><dt><code>HARDENED_IMAGE / USERSPACE_IMAGE</code></dt><dd>같은 repository에서 두 단계를 tag로 구분합니다.</dd><dt><code>~/.lab-env</code></dt><dd>SSH 연결이 끊겨 shell 변수가 사라져도 <code>source ~/.lab-env</code>로 Step 2~3의 변수를 다시 불러올 수 있도록 저장합니다. (OS 전환 후 새 시스템에는 이 파일이 없으므로 3-5에서 변수를 다시 설정합니다.)</dd></dl></div></div><div class="table-scroll"><table class="verify"><thead><tr><th>검증 항목</th><th>정상 기준</th><th>의미</th></tr></thead><tbody><tr><td>Quay 로그인</td><td><code># OK: Quay 로그인 완료</code> 출력</td><td>FAIL이 보이면 Account Settings에서 비밀번호 설정 후 다시 실행</td></tr><tr><td>원본 bootc 이미지 (<code>SOURCE_BOOTC_IMAGE</code>)</td><td>quay.io/yeslee/rhel10-bootc:10.2</td><td>RHEL 10.2 source bootc image · kpatch 실습용 kernel 6.12.0-211.16.1.el10_2 사전 고정</td></tr><tr><td>Hardened 이미지 (<code>HARDENED_IMAGE</code>)</td><td>quay.io/&lt;로그인한 Quay Username&gt;/rhel10-cve-lab:hardened</td><td>초기 보안 강화 tag</td></tr><tr><td>Userspace 업데이트 이미지 (<code>USERSPACE_IMAGE</code>)</td><td>quay.io/&lt;로그인한 Quay Username&gt;/rhel10-cve-lab:userspace-update</td><td>userspace 변경 tag</td></tr></tbody></table></div></section><section id="s2"><div class="section-kicker">STEP 2</div><h2>Hardened Image 직접 생성</h2><p class="lead">사전 검증된 RHEL 10.2 bootc source image를 기반으로, 서버 설치 후 수동 보안 설정을 하는 대신 보안 설정이 포함된 OS image 자체를 참가자가 만듭니다.</p>
+<div class="callout warn"><strong>운영 환경 주의</strong><p>실습에서는 단순화를 위해 현재 호스트의 lab-user hash를 build ARG로 전달합니다. 평문 비밀번호는 이미지에 들어가지 않지만, 이미지에 hash가 포함되므로 Quay repository는 private으로 유지합니다. 운영에서는 SSH key/build secret/systemd credential 같은 방법을 고려합니다.</p></div>
+<div class="callout info"><strong>실습용 Source Image</strong><p><code>quay.io/yeslee/rhel10-bootc:10.2</code>에는 kpatch 실습에 사용할 <code>kernel-6.12.0-211.16.1.el10_2</code>가 사전에 고정되어 있고, 기본 실습에 필요한 패키지를 제공하는 <code>workshop-rhel10</code> DNF Repository가 <strong>이미지 안(<code>/usr/share/workshop-repo</code>)에 내장</strong>되어 있습니다. 별도 repo 서버에 접속하지 않으므로 네트워크 상태와 관계없이 동작하며, Step 1~6에서는 참가자가 RHSM을 별도로 등록할 필요가 없습니다. 참가자는 해당 base image를 기반으로 Hardening과 Image Mode 업데이트 흐름에 집중합니다.</p></div><h3>2-1. Hardened Containerfile</h3><div class="code-card" data-lang="containerfile"><div class="code-head"><span>Containerfile · :hardened 전체</span><div class="code-actions"><span class="quick-tip-wrap"><button aria-label="핵심 명령 빠른 설명" class="quick-tip" type="button">ⓘ</button><span class="quick-tip-pop" role="tooltip"><span class="tip-item"><b><code>bootc container lint</code></b>컨테이너가 bootc OS 이미지로 사용할 수 있는 기본 구조를 충족하는지 검사합니다.</span></span></span><button aria-controls="explain-4" aria-expanded="false" class="explain-toggle" type="button">명령어 설명</button><button class="copy" type="button">복사</button></div></div><pre><code>cat &lt;&lt;'EOF' &gt; Containerfile.hardened
 FROM quay.io/yeslee/rhel10-bootc:10.2
 
 ARG LAB_PASSWORD_HASH
@@ -164,8 +208,13 @@ RUN dnf install -y \
 
 # ------------------------------------------------------------
 # 2. 재부팅 후 접속할 lab-user 구성
+#    현재 RHEL 10.0 호스트의 lab-user 비밀번호 hash를 그대로 사용합니다.
+#    hash가 비어 있거나 잠긴 계정(! / *)이면 빌드를 중단합니다.
 # ------------------------------------------------------------
-RUN if ! id lab-user &gt;/dev/null 2&gt;&amp;1; then \
+RUN case "${LAB_PASSWORD_HASH}" in \
+        ''|'!'*|'*'*) echo "ERROR: 유효한 lab-user 비밀번호 hash가 아닙니다." &gt;&amp;2; exit 1 ;; \
+    esac \
+    &amp;&amp; if ! id lab-user &gt;/dev/null 2&gt;&amp;1; then \
         useradd -m -s /bin/bash lab-user; \
     fi \
     &amp;&amp; usermod -aG wheel lab-user \
@@ -213,20 +262,20 @@ RUN printf '%s\n' 'hardened' \
 
 # bootc image에 kernel이 정확히 1개만 포함되어 있는지 포함해 최종 구조 검증
 RUN bootc container lint
-EOF</code></pre><div class="command-explain" id="explain-4"><div class="explain-title">필요할 때만 펼쳐보는 명령어 설명</div><dl><dt><code>FROM ...</code></dt><dd>사전에 검증한 RHEL 10.2 bootc 이미지를 기반 이미지로 사용합니다.</dd><dt><code>ARG LAB_PASSWORD_HASH</code></dt><dd>빌드 시 전달받은 lab-user 비밀번호 해시를 Containerfile 안에서 사용합니다.</dd><dt><code>rpm -q kernel-core | grep ...</code></dt><dd>실습에 필요한 6.12.0-211.16.1.el10_2 커널이 base image에 실제 포함되어 있는지 확인합니다.</dd><dt><code>dnf install ...</code></dt><dd>SSH, sudo, Podman, RHC/Lightspeed client, kpatch 등 이후 실습에 필요한 패키지를 OS 이미지 안에 포함합니다.</dd><dt><code>useradd / usermod / sshd_config</code></dt><dd>재부팅 후 접속할 lab-user와 sudo 권한, SSH 비밀번호 로그인 설정을 이미지에 코드로 정의합니다.</dd><dt><code>sysctl / SELinux / marker</code></dt><dd>보안 강화 설정과 실습 단계 식별용 파일을 이미지에 기록합니다.</dd><dt><code>bootc container lint</code></dt><dd>완성된 컨테이너가 bootc OS 이미지로 사용 가능한 구조인지 검사합니다.</dd></dl></div></div>
-<div class="callout warn"><strong>실습 편의 설정</strong><p>이 실습은 접속 편의를 위해 <code>PasswordAuthentication yes</code>와 <code>lab-user NOPASSWD sudo</code>를 사용합니다. 두 항목은 운영 환경의 hardening 권고가 아니라 실습 편의를 위한 예외입니다. 여기서 Hardened Image는 SELinux/sysctl 등 보안 설정을 OS 이미지에 코드화하는 방식을 보여주는 예시입니다.</p></div><h3>2-3. Hardening 의미</h3><div class="table-scroll"><table class="verify"><thead><tr><th>검증 항목</th><th>정상 기준</th><th>의미</th></tr></thead><tbody><tr><td>rp_filter=1</td><td>Strict reverse path filtering</td><td>IP spoofing 대응에 도움. 비대칭 routing은 주의</td></tr><tr><td>tcp_syncookies=1</td><td>SYN Cookie</td><td>SYN backlog 고갈 상황의 대응 보조</td></tr><tr><td>unprivileged_bpf_disabled=1</td><td>비권한 BPF 제한</td><td>eBPF 공격 표면 축소. 관측 도구 요구사항 확인</td></tr><tr><td>SELINUX=enforcing</td><td>SELinux 강제</td><td>정책 위반 접근을 실제 차단</td></tr><tr><td>kpatch/kpatch-dnf</td><td>live patch 도구 포함</td><td><code>6.12.0-211.16.1.el10_2</code> kernel에서 실제 kpatch 적용 실습</td></tr></tbody></table></div>
-<h3>2-4. Build</h3><div class="code-card" data-lang="shell"><div class="code-head"><span>Shell · :hardened build</span><div class="code-actions"><button aria-controls="explain-5" aria-expanded="false" class="explain-toggle" type="button">명령어 설명</button><button class="copy" type="button">복사</button></div></div><pre><code>sudo podman build \
-  --build-arg LAB_PASSWORD_HASH="${LAB_PASSWORD_HASH}" \
+EOF</code></pre><div class="command-explain" id="explain-4"><div class="explain-title">필요할 때만 펼쳐보는 명령어 설명</div><dl><dt><code>FROM ...</code></dt><dd>사전에 검증한 RHEL 10.2 bootc 이미지를 기반 이미지로 사용합니다.</dd><dt><code>ARG LAB_PASSWORD_HASH</code></dt><dd>빌드 시 전달받은 현재 호스트의 lab-user 비밀번호 해시를 Containerfile 안에서 사용합니다.</dd><dt><code>case "${LAB_PASSWORD_HASH}"</code></dt><dd>해시가 비어 있거나 잠긴 계정 형식이면 빌드를 실패시켜, 비밀번호 없는 lab-user가 이미지에 들어가는 것을 막습니다.</dd><dt><code>rpm -q kernel-core | grep ...</code></dt><dd>실습에 필요한 6.12.0-211.16.1.el10_2 커널이 base image에 실제 포함되어 있는지 확인합니다.</dd><dt><code>dnf install ...</code></dt><dd>SSH, sudo, Podman, RHC/Lightspeed client, kpatch 등 이후 실습에 필요한 패키지를 OS 이미지 안에 포함합니다.</dd><dt><code>useradd / usermod / sshd_config</code></dt><dd>재부팅 후 접속할 lab-user와 sudo 권한, SSH 비밀번호 로그인 설정을 이미지에 코드로 정의합니다.</dd><dt><code>sysctl / SELinux / marker</code></dt><dd>보안 강화 설정과 실습 단계 식별용 파일을 이미지에 기록합니다.</dd><dt><code>bootc container lint</code></dt><dd>완성된 컨테이너가 bootc OS 이미지로 사용 가능한 구조인지 검사합니다.</dd></dl></div></div>
+<div class="callout warn"><strong>실습 편의 설정</strong><p>이 실습은 접속 편의를 위해 <code>PasswordAuthentication yes</code>와 <code>lab-user NOPASSWD sudo</code>를 사용합니다. 두 항목은 운영 환경의 hardening 권고가 아니라 실습 편의를 위한 예외입니다. 여기서 Hardened Image는 SELinux/sysctl 등 보안 설정을 OS 이미지에 코드화하는 방식을 보여주는 예시입니다.</p></div><h3>2-2. Hardening 의미</h3><div class="table-scroll"><table class="verify"><thead><tr><th>검증 항목</th><th>정상 기준</th><th>의미</th></tr></thead><tbody><tr><td>rp_filter=1</td><td>Strict reverse path filtering</td><td>IP spoofing 대응에 도움. 비대칭 routing은 주의</td></tr><tr><td>tcp_syncookies=1</td><td>SYN Cookie</td><td>SYN backlog 고갈 상황의 대응 보조</td></tr><tr><td>unprivileged_bpf_disabled=1</td><td>비권한 BPF 제한</td><td>eBPF 공격 표면 축소. 관측 도구 요구사항 확인</td></tr><tr><td>SELINUX=enforcing</td><td>SELinux 강제</td><td>정책 위반 접근을 실제 차단</td></tr><tr><td>kpatch/kpatch-dnf</td><td>live patch 도구 포함</td><td><code>6.12.0-211.16.1.el10_2</code> kernel에서 실제 kpatch 적용 실습</td></tr></tbody></table></div>
+<h3>2-3. Build</h3><div class="code-card" data-lang="shell"><div class="code-head"><span>Shell · :hardened build</span><div class="code-actions"><button aria-controls="explain-5" aria-expanded="false" class="explain-toggle" type="button">명령어 설명</button><button class="copy" type="button">복사</button></div></div><pre><code>[ -f ~/.lab-env ] &amp;&amp; source ~/.lab-env
+
+# 현재 호스트의 lab-user 비밀번호 hash를 build 시점에 직접 읽어 전달합니다.
+sudo podman build \
+  --build-arg LAB_PASSWORD_HASH="$(sudo getent shadow lab-user | cut -d: -f2)" \
   -t "${HARDENED_IMAGE}" \
-  -f Containerfile.hardened .
+  -f Containerfile.hardened . \
+&amp;&amp; sudo podman image exists "${HARDENED_IMAGE}" \
+&amp;&amp; echo "Local hardened image: OK"
 
-sudo podman image exists "${HARDENED_IMAGE}" \
-  &amp;&amp; echo "Local hardened image: OK"
-
-sudo podman images "${LAB_REPO}"
-
-unset LAB_PASSWORD_HASH</code></pre><div class="command-explain" id="explain-5"><div class="explain-title">필요할 때만 펼쳐보는 명령어 설명</div><dl><dt><code>podman build --build-arg ...</code></dt><dd>2-1에서 만든 lab-user 비밀번호 해시를 전달해 Hardened OS 이미지를 빌드합니다.</dd><dt><code>-t "${HARDENED_IMAGE}"</code></dt><dd>완성된 로컬 이미지에 본인의 Quay repository와 <code>:hardened</code> tag를 지정합니다.</dd><dt><code>podman image exists</code></dt><dd>build가 성공해 해당 tag의 로컬 이미지가 실제 생성되었는지 확인합니다.</dd><dt><code>unset LAB_PASSWORD_HASH</code></dt><dd>build가 끝난 뒤 현재 shell에 남아 있는 비밀번호 해시 변수를 제거합니다.</dd></dl></div></div><div class="callout danger"><strong>성공 후 다음 명령</strong><p>Build가 실패했다면 run/push를 이어서 실행하지 않습니다. 뒤의 repository not found는 첫 build 실패가 만든 연쇄 오류일 수 있습니다.</p></div>
-<h3>2-5. Image 내부 검증</h3><div class="code-card" data-lang="shell"><div class="code-head"><span>Shell · :hardened 내용 검증</span><div class="code-actions"><button aria-controls="explain-6" aria-expanded="false" class="explain-toggle" type="button">명령어 설명</button><button class="copy" type="button">복사</button></div></div><pre><code>sudo podman run --rm "${HARDENED_IMAGE}" sh -lc '
+sudo podman images "${LAB_REPO}"</code></pre><div class="command-explain" id="explain-5"><div class="explain-title">필요할 때만 펼쳐보는 명령어 설명</div><dl><dt><code>source ~/.lab-env</code></dt><dd>SSH가 끊겼다가 다시 접속한 경우에도 1-2에서 저장한 이미지 변수를 불러옵니다.</dd><dt><code>podman build --build-arg ...</code></dt><dd>현재 호스트의 lab-user 비밀번호 해시를 build 명령 안에서 직접 읽어 전달합니다. shell 변수를 거치지 않으므로 재접속이나 build 재시도 시에도 빈 값이 전달되지 않습니다.</dd><dt><code>-t "${HARDENED_IMAGE}"</code></dt><dd>완성된 로컬 이미지에 본인의 Quay repository와 <code>:hardened</code> tag를 지정합니다.</dd><dt><code>&amp;&amp; podman image exists</code></dt><dd>build가 성공했을 때만 해당 tag의 로컬 이미지가 실제 생성되었는지 확인하고 OK를 출력합니다.</dd></dl></div></div><div class="callout danger"><strong>성공 후 다음 명령</strong><p>Build가 실패했다면 run/push를 이어서 실행하지 않습니다. 뒤의 repository not found는 첫 build 실패가 만든 연쇄 오류일 수 있습니다.</p></div>
+<h3>2-4. Image 내부 검증</h3><div class="code-card" data-lang="shell"><div class="code-head"><span>Shell · :hardened 내용 검증</span><div class="code-actions"><button aria-controls="explain-6" aria-expanded="false" class="explain-toggle" type="button">명령어 설명</button><button class="copy" type="button">복사</button></div></div><pre><code>sudo podman run --rm "${HARDENED_IMAGE}" sh -lc '
 set -e
 printf "=== 운영체제 ===\n"
 cat /etc/redhat-release
@@ -256,23 +305,68 @@ printf "\n=== Userspace 기준 상태 ===\n"
 rpm -q openssl openssl-libs glibc
 rpm -q tree || true
 ' </code></pre><div class="command-explain" id="explain-6"><div class="explain-title">필요할 때만 펼쳐보는 명령어 설명</div><dl><dt><code>podman run --rm ...</code></dt><dd>Hardened 이미지를 임시 컨테이너로 실행해 실제 파일과 패키지 구성을 확인한 뒤 자동 삭제합니다.</dd><dt><code>sh -lc '...'</code></dt><dd>여러 검증 명령을 하나의 shell 세션 안에서 순서대로 실행합니다.</dd><dt><code>set -e</code></dt><dd>검증 중 명령 하나가 실패하면 이후 검증을 계속하지 않고 즉시 종료합니다.</dd><dt><code>getent / id / systemctl is-enabled</code></dt><dd>lab-user 계정·그룹과 SSH 서비스의 활성화 설정이 이미지에 들어갔는지 확인합니다.</dd><dt><code>rpm -q ...</code></dt><dd>커널, kpatch 도구, Userspace 패키지의 실제 RPM 버전을 조회합니다.</dd></dl></div></div><div class="table-scroll"><table class="verify"><thead><tr><th>검증 항목</th><th>정상 기준</th><th>의미</th></tr></thead><tbody><tr><td>운영체제</td><td>RHEL 10.2</td><td>원본 이미지의 RHEL 10.2 버전 유지</td></tr><tr><td>이미지 식별 정보 (<code>marker</code>)</td><td>hardened / 1.0</td><td>기준 Userspace 상태</td></tr><tr><td>실습 사용자 계정 (<code>lab-user</code>)</td><td>wheel 포함</td><td>재부팅 후 접근 가능</td></tr><tr><td>SELinux 실행 모드 (<code>SELinux</code>)</td><td>enforcing</td><td>보안 정책 구성</td></tr><tr><td>보안 강화 설정 파일 (<code>sysctl</code>)</td><td>세 값 존재</td><td>hardening 설정이 image에 코드화</td></tr><tr><td>커널 패키지 (<code>kernel-core</code>)</td><td><code>6.12.0-211.16.1.el10_2</code></td><td>Source Image에 사전 고정된 kpatch 실습 대상 kernel이며 userspace update와 비교 기준</td></tr><tr><td>Userspace 변경 확인 (<code>tree</code>)</td><td>미설치 가능</td><td>뒤 userspace 변화 marker</td></tr></tbody></table></div>
-<h3>2-6. Quay Push</h3><div class="code-card" data-lang="shell"><div class="code-head"><span>Shell · :hardened push</span><div class="code-actions"><button aria-controls="explain-7" aria-expanded="false" class="explain-toggle" type="button">명령어 설명</button><button class="copy" type="button">복사</button></div></div><pre><code>sudo podman push "${HARDENED_IMAGE}"
+<h3>2-5. Quay Push</h3><div class="code-card" data-lang="shell"><div class="code-head"><span>Shell · :hardened push</span><div class="code-actions"><button aria-controls="explain-7" aria-expanded="false" class="explain-toggle" type="button">명령어 설명</button><button class="copy" type="button">복사</button></div></div><pre><code>[ -f ~/.lab-env ] &amp;&amp; source ~/.lab-env
+rm -f ~/.lab-hardened-pushed
 
-# 원격 레지스트리에서 실제로 pull 가능한지 확인
-sudo podman pull "${HARDENED_IMAGE}"
+if sudo podman push --digestfile /tmp/hardened.digest "${HARDENED_IMAGE}"; then
+  PUSHED_DIGEST="$(cat /tmp/hardened.digest)"
 
-# 같은 repository 안의 두 tag 구조 확인
-printf '저장소 : %s\n' "${LAB_REPO}"
-printf '태그   : hardened\n' </code></pre><div class="command-explain" id="explain-7"><div class="explain-title">필요할 때만 펼쳐보는 명령어 설명</div><dl><dt><code>podman push</code></dt><dd>로컬 Hardened 이미지를 참가자의 Quay repository에 업로드합니다.</dd><dt><code>podman pull</code></dt><dd>방금 올린 원격 tag를 다시 받을 수 있는지 확인해 registry 저장 상태까지 검증합니다.</dd><dt><code>printf ...</code></dt><dd>현재 사용하는 repository와 tag를 화면에 명확하게 표시합니다.</dd></dl></div></div><div class="table-scroll"><table class="verify"><thead><tr><th>검증 항목</th><th>정상 기준</th><th>의미</th></tr></thead><tbody><tr><td>Quay 이미지 Push (<code>push</code>)</td><td>manifest까지 정상 종료</td><td>Quay에 실제 image 업로드</td></tr><tr><td>Quay 이미지 Pull (<code>pull</code>)</td><td>원격 tag pull 성공</td><td>tag가 비어 있지 않음</td></tr><tr><td>Quay 태그 확인 (<code>Quay UI</code>)</td><td>Tags → hardened</td><td>repository와 tag를 구분</td></tr></tbody></table></div>
+  # 원격 레지스트리에서 실제로 같은 이미지를 받을 수 있는지 확인
+  if sudo podman pull "${HARDENED_IMAGE}" &gt;/dev/null; then
+    REMOTE_DIGEST="$(sudo podman image inspect --format '{{.Digest}}' "${HARDENED_IMAGE}")"
+    if [ "${PUSHED_DIGEST}" = "${REMOTE_DIGEST}" ]; then
+      echo "${PUSHED_DIGEST}" &gt; ~/.lab-hardened-pushed
+      echo "################################################"
+      echo "# OK: Quay push + pull 검증 완료"
+      echo "#     ${HARDENED_IMAGE}"
+      echo "#     ${PUSHED_DIGEST}"
+      echo "################################################"
+    else
+      echo "################################################"
+      echo "# FAIL: Quay의 이미지가 방금 push한 이미지와 다릅니다."
+      echo "#       pushed : ${PUSHED_DIGEST}"
+      echo "#       remote : ${REMOTE_DIGEST}"
+      echo "################################################"
+    fi
+  else
+    echo "################################################"
+    echo "# FAIL: push는 되었지만 Quay에서 pull할 수 없습니다."
+    echo "################################################"
+  fi
+else
+  echo "################################################"
+  echo "# FAIL: Quay push 실패 - 다음 단계로 진행하지 마세요."
+  echo "#  1) Quay.io에 ${QUAY_USER}/rhel10-cve-lab repository가 있는지"
+  echo "#  2) 본인 Username으로 로그인했는지 (sudo podman login quay.io)"
+  echo "#  확인 후 이 블록을 다시 실행하세요."
+  echo "################################################"
+fi</code></pre><div class="command-explain" id="explain-7"><div class="explain-title">필요할 때만 펼쳐보는 명령어 설명</div><dl><dt><code>podman push --digestfile</code></dt><dd>로컬 Hardened 이미지를 Quay에 업로드하고, 업로드한 manifest digest를 파일로 기록합니다. push가 실패하면 FAIL을 표시하고 이후 검증을 실행하지 않습니다.</dd><dt><code>podman pull + image inspect</code></dt><dd>방금 올린 원격 tag를 다시 받아 digest를 비교합니다. Quay에 예전 이미지가 남아 있는 경우도 FAIL로 표시합니다.</dd><dt><code>~/.lab-hardened-pushed</code></dt><dd>push와 pull 검증이 모두 성공했을 때만 생성되는 확인 파일입니다. 3-1은 이 파일이 있어야만 진행됩니다.</dd></dl></div></div><div class="table-scroll"><table class="verify"><thead><tr><th>검증 항목</th><th>정상 기준</th><th>의미</th></tr></thead><tbody><tr><td>Quay 이미지 Push (<code>push</code>)</td><td><code># OK: Quay push + pull 검증 완료</code> 출력</td><td>Quay에 실제 image 업로드</td></tr><tr><td>Quay 이미지 Pull (<code>pull</code>)</td><td>원격 tag pull 성공</td><td>tag가 비어 있지 않음</td></tr><tr><td>Quay 태그 확인 (<code>Quay UI</code>)</td><td>Tags → hardened</td><td>repository와 tag를 구분</td></tr></tbody></table></div>
 </section><section id="s3"><div class="section-kicker">STEP 3</div><h2>RHEL 10.2 Image Mode로 전환</h2><p class="lead">Quay의 :hardened image를 실제 root OS로 설치하고, 파일 설정과 runtime 상태를 함께 검증합니다.</p>
-<h3>3-1. bootc private registry 인증</h3><div class="code-card" data-lang="shell"><div class="code-head"><span>Shell · /etc/ostree/auth.json</span><div class="code-actions"><button aria-controls="explain-8" aria-expanded="false" class="explain-toggle" type="button">명령어 설명</button><button class="copy" type="button">복사</button></div></div><pre><code># sudo podman login으로 생성한 root용 Quay 인증을 bootc에도 제공
-sudo mkdir -p /etc/ostree
-sudo cp /run/containers/0/auth.json /etc/ostree/auth.json
-sudo chmod 600 /etc/ostree/auth.json
+<h3>3-1. bootc private registry 인증</h3><div class="code-card" data-lang="shell"><div class="code-head"><span>Shell · /etc/ostree/auth.json</span><div class="code-actions"><button aria-controls="explain-8" aria-expanded="false" class="explain-toggle" type="button">명령어 설명</button><button class="copy" type="button">복사</button></div></div><pre><code>[ -f ~/.lab-env ] &amp;&amp; source ~/.lab-env
 
-# 설치 전에 private image pull 자체가 되는지 분리 검증
-sudo podman pull "${HARDENED_IMAGE}"
-sudo test -s /etc/ostree/auth.json &amp;&amp; echo "bootc auth: OK"</code></pre><div class="command-explain" id="explain-8"><div class="explain-title">필요할 때만 펼쳐보는 명령어 설명</div><dl><dt><code>mkdir -p /etc/ostree</code></dt><dd>bootc가 private Quay 이미지를 가져올 때 사용할 인증 파일 위치를 준비합니다.</dd><dt><code>cp /run/containers/0/auth.json ...</code></dt><dd>root Podman의 Quay 인증 정보를 bootc가 읽는 인증 파일 위치로 복사합니다.</dd><dt><code>chmod 600</code></dt><dd>registry 인증 파일을 root만 읽고 쓸 수 있도록 권한을 제한합니다.</dd><dt><code>podman pull</code></dt><dd>파괴적인 OS 전환 전에 private Quay 이미지 자체를 정상적으로 받을 수 있는지 먼저 확인합니다.</dd><dt><code>test -s /etc/ostree/auth.json</code></dt><dd>인증 파일이 존재하면서 비어 있지 않은지 확인합니다.</dd></dl></div></div><div class="table-scroll"><table class="verify"><thead><tr><th>검증 항목</th><th>정상 기준</th><th>의미</th></tr></thead><tbody><tr><td>bootc 레지스트리 인증 파일 (<code>/etc/ostree/auth.json</code>)</td><td>non-empty</td><td>bootc가 private Quay pull 가능</td></tr><tr><td>Hardened 이미지 Pull (<code>podman pull</code>)</td><td>성공</td><td>registry 문제를 설치 전에 분리 확인</td></tr></tbody></table></div>
+if [ ! -s ~/.lab-hardened-pushed ]; then
+  echo "################################################"
+  echo "# STOP: 2-5 Quay push 검증이 완료되지 않았습니다."
+  echo "#       2-5를 먼저 성공시킨 뒤 진행하세요."
+  echo "################################################"
+else
+  # sudo podman login으로 생성한 root용 Quay 인증을 bootc에도 제공
+  sudo mkdir -p /etc/ostree
+  sudo cp /run/containers/0/auth.json /etc/ostree/auth.json
+  sudo chmod 600 /etc/ostree/auth.json
+
+  # 설치 전에 private image pull 자체가 되는지 분리 검증
+  if sudo test -s /etc/ostree/auth.json &amp;&amp; sudo podman pull "${HARDENED_IMAGE}" &gt;/dev/null; then
+    echo "################################################"
+    echo "# OK: bootc 인증 + 이미지 확인 완료"
+    echo "#     3-2 OS 전환을 진행하세요."
+    echo "################################################"
+  else
+    echo "################################################"
+    echo "# FAIL: bootc 인증 또는 이미지 pull 실패 - 3-2로 진행하지 마세요."
+    echo "################################################"
+  fi
+fi</code></pre><div class="command-explain" id="explain-8"><div class="explain-title">필요할 때만 펼쳐보는 명령어 설명</div><dl><dt><code>~/.lab-hardened-pushed</code></dt><dd>2-5에서 Quay push/pull 검증이 성공했는지 확인합니다. 없으면 STOP을 표시하고 아무 작업도 하지 않습니다.</dd><dt><code>mkdir -p /etc/ostree</code></dt><dd>bootc가 private Quay 이미지를 가져올 때 사용할 인증 파일 위치를 준비합니다.</dd><dt><code>cp /run/containers/0/auth.json ...</code></dt><dd>root Podman의 Quay 인증 정보를 bootc가 읽는 인증 파일 위치로 복사합니다.</dd><dt><code>chmod 600</code></dt><dd>registry 인증 파일을 root만 읽고 쓸 수 있도록 권한을 제한합니다.</dd><dt><code>test -s &amp;&amp; podman pull</code></dt><dd>인증 파일이 비어 있지 않고 private Quay 이미지를 정상적으로 받을 수 있을 때만 OK를 표시합니다.</dd></dl></div></div><div class="table-scroll"><table class="verify"><thead><tr><th>검증 항목</th><th>정상 기준</th><th>의미</th></tr></thead><tbody><tr><td>bootc 레지스트리 인증 파일 (<code>/etc/ostree/auth.json</code>)</td><td>non-empty</td><td>bootc가 private Quay pull 가능</td></tr><tr><td>Hardened 이미지 Pull (<code>podman pull</code>)</td><td><code># OK: bootc 인증 + 이미지 확인 완료</code> 출력</td><td>registry 문제를 설치 전에 분리 확인</td></tr></tbody></table></div>
 <h3>3-2. OS 전환</h3>
 <div class="code-card" data-lang="shell"><div class="code-head"><span>Shell · system-reinstall-bootc</span><div class="code-actions"><span class="quick-tip-wrap"><button aria-label="핵심 명령 빠른 설명" class="quick-tip" type="button">ⓘ</button><span class="quick-tip-pop" role="tooltip"><span class="tip-item"><b><code>system-reinstall-bootc</code></b>현재 root OS를 지정한 bootc 이미지 기반 OS로 다시 설치합니다. 파괴적 작업이므로 대상 이미지와 인증을 먼저 검증합니다.</span></span></span><button aria-controls="explain-9" aria-expanded="false" class="explain-toggle" type="button">명령어 설명</button><button class="copy" type="button">복사</button></div></div><pre><code>sudo system-reinstall-bootc "${HARDENED_IMAGE}"</code></pre><div class="command-explain" id="explain-9"><div class="explain-title">필요할 때만 펼쳐보는 명령어 설명</div><dl><dt><code>system-reinstall-bootc</code></dt><dd>현재 Package Mode root OS를 지정한 bootc 이미지 기반 OS로 다시 설치합니다. 디스크의 root OS가 교체되는 파괴적 단계입니다.</dd><dt><code>${HARDENED_IMAGE}</code></dt><dd>Step 2에서 직접 만들고 Quay에 push한 Hardened 이미지를 새 root OS의 원본으로 사용합니다.</dd></dl></div></div>
 <div class="callout info"><strong>SSH authorized key 사용자 선택</strong><p>명령 실행 후 SSH authorized key 원본 사용자를 선택하는 TUI가 표시됩니다. <strong>화면 하단에 표시되는 조작 키 안내에 따라 lab-user를 선택하고 다음 단계로 진행합니다.</strong> 현재 검증한 실습 환경에서는 방향키로 이동한 뒤 Space로 [x] 선택, Enter로 진행할 수 있습니다. 선택 후 추가 확인 화면이 나오면 내용을 확인하고 계속 진행합니다.</p></div>
@@ -289,7 +383,7 @@ Enter   : 다음 단계 진행</code></pre></div>
 <div class="table-scroll"><table class="verify"><thead><tr><th>확인 항목</th><th>수행 방법</th><th>의미</th></tr></thead><tbody><tr><td>SSH Key 원본 사용자 선택 (<code>lab-user</code>)</td><td>TUI에 표시되는 조작 키 사용</td><td>현재 lab-user의 SSH authorized key를 새 bootc 시스템의 root 사용자로 가져올 원본으로 선택합니다.</td></tr><tr><td>사용자 선택 확인</td><td>현재 화면의 안내에 따라 진행</td><td>버전에 따라 조작 키나 추가 확인 화면이 다를 수 있으므로 화면 안내를 우선합니다.</td></tr><tr><td>OS 전환 준비 완료</td><td>명령이 오류 없이 종료될 때까지 대기</td><td>Package Mode root OS를 Hardened bootc image 기반 시스템으로 교체할 준비가 완료됩니다.</td></tr></tbody></table></div>
 <div class="callout warn"><strong>중요</strong><p>
 이 화면의 <code>lab-user</code> 선택은 새 시스템의 <code>lab-user</code> 계정을 생성하는 단계가 아닙니다.
-<code>lab-user</code> 계정 자체와 비밀번호/SSH 설정은 앞서 Hardened Image를 만들 때 이미 구성했습니다.
+<code>lab-user</code> 계정 자체와 비밀번호/SSH 설정은 앞서 Hardened Image를 만들 때 이미 구성했습니다. 비밀번호는 지금 RHEL 10.0에 접속할 때 사용한 lab-user 비밀번호와 같습니다.
 여기서는 현재 시스템의 SSH authorized key를 새 bootc 시스템의 root 계정으로 가져올 원본 사용자를 선택합니다.
 </p></div>
 <div class="code-card" data-lang="shell"><div class="code-head"><span>Shell · 설치 완료 후 재부팅</span><div class="code-actions"><span class="quick-tip-wrap"><button aria-label="핵심 명령 빠른 설명" class="quick-tip" type="button">ⓘ</button><span class="quick-tip-pop" role="tooltip"><span class="tip-item"><b><code>system-reinstall-bootc</code></b>현재 root OS를 지정한 bootc 이미지 기반 OS로 다시 설치합니다. 파괴적 작업이므로 대상 이미지와 인증을 먼저 검증합니다.</span></span></span><button aria-controls="explain-10" aria-expanded="false" class="explain-toggle" type="button">명령어 설명</button><button class="copy" type="button">복사</button></div></div><pre><code># system-reinstall-bootc 설치 작업이 정상 종료된 뒤에만 실행합니다.
@@ -331,7 +425,7 @@ ssh lab-user@%LAB_HOST%</code></pre><div class="command-explain" id="explain-14"
 <tr><td>이전 SSH Host Key 삭제 (<code>ssh-keygen -R &lt;hostname&gt;</code>)</td><td><code>Host ... found</code>, <code>known_hosts updated</code>와 비슷한 메시지</td><td>해당 hostname의 이전 key만 제거되었습니다.</td></tr>
 <tr><td>SSH 재접속 (<code>ssh</code>)</td><td><code>The authenticity of host ... can't be established</code>와 새 fingerprint 표시</td><td>새 host key가 아직 로컬에 등록되지 않아 최초 접속처럼 다시 확인하는 단계입니다.</td></tr>
 <tr><td>새 SSH Host Key 등록 (<code>yes</code>)</td><td><code>Permanently added ... to the list of known hosts</code></td><td>새 SSH host key가 <code>known_hosts</code>에 저장됩니다.</td></tr>
-<tr><td>lab-user 로그인 (<code>lab-user</code>)</td><td>Step 2에서 설정한 비밀번호 또는 준비된 SSH 인증으로 로그인 성공</td><td>Hardened Image의 사용자와 SSH 설정이 실제 RHEL 10.2 Image Mode 시스템에서 정상 동작함을 확인합니다.</td></tr>
+<tr><td>lab-user 로그인 (<code>lab-user</code>)</td><td>기존 RHEL 10.0 접속 시 사용한 lab-user 비밀번호 또는 준비된 SSH 인증으로 로그인 성공</td><td>Hardened Image의 사용자와 SSH 설정이 실제 RHEL 10.2 Image Mode 시스템에서 정상 동작함을 확인합니다.</td></tr>
 </tbody></table></div>
 <div class="callout danger"><strong>OS 재설치 없이 갑자기 경고가 나온 경우</strong><p>
 본인이 OS 재설치, VM 재프로비저닝 또는 호스트 교체를 수행하지 않았는데 <code>REMOTE HOST IDENTIFICATION HAS CHANGED!</code>가 갑자기 발생했다면 바로 이전 key를 삭제하지 않습니다. 먼저 접속 대상 hostname/IP가 맞는지 확인합니다. 이번 실습에서는 바로 앞 단계에서 <code>system-reinstall-bootc</code>를 수행했기 때문에 host key 변경이 예상되는 상황입니다.
@@ -372,8 +466,8 @@ sudo cp /run/containers/0/auth.json /etc/ostree/auth.json
 sudo chmod 600 /etc/ostree/auth.json
 sudo test -s /etc/ostree/auth.json &amp;&amp; echo "bootc auth: OK"</code></pre><div class="command-explain" id="explain-16"><div class="explain-title">필요할 때만 펼쳐보는 명령어 설명</div><dl><dt><code>podman login --get-login quay.io</code></dt><dd>재부팅 후 Quay에 다시 로그인한 뒤 로그인된 Username을 자동으로 가져와 이후 build/switch용 경로를 다시 만듭니다.</dd><dt><code>HARDENED_IMAGE / USERSPACE_IMAGE</code></dt><dd>Step 5와 Step 6에서 사용할 두 tag 경로를 다시 구성합니다.</dd><dt><code>podman login quay.io</code></dt><dd>새 Image Mode host에서 Quay 인증을 다시 생성합니다.</dd><dt><code>/etc/ostree/auth.json</code></dt><dd>bootc가 private registry 이미지를 pull할 수 있도록 인증 파일을 준비합니다.</dd></dl></div></div>
 </section><section id="s4"><div class="section-kicker">STEP 4</div><h2>Kernel CVE 대응 — kpatch</h2><p class="lead">Source Image에 사전 구성된 <code>workshop-rhel10</code> Repository를 사용해 RHSM 등록 없이 실제 kernel live patch를 적용합니다. 기본 실습에서는 Repository/RHSM 상태에 따른 분기 없이 동일한 경로로 진행합니다.</p>
-<div class="callout warn"><strong>지원 조건</strong><p>RHEL 10 kpatch는 RHEL 10.2부터 지원됩니다. 이번 실습은 <code>kernel-6.12.0-211.16.1.el10_2</code>로 고정된 Source Image와 Workshop Repository에서 제공하는 <code>kpatch-patch-6_12_0-211_16_1-1-5.el10_2</code>를 사용해 <code>[enabled]</code> live patch module을 확인합니다. 모든 CVE가 live patch 대상은 아닙니다.</p></div>
-<div class="callout info"><strong>기본 실습의 Repository 구성</strong><p><code>workshop-rhel10</code> Repository 설정은 실습용 Source Image에 미리 포함되어 있습니다. 따라서 Step 1~6에서는 개인 Red Hat 계정이나 RHSM 등록 없이 kpatch와 Userspace Update를 진행합니다. RHSM 등록은 Step 7 Optional 실습에서만 수행합니다.</p></div>
+<div class="callout warn"><strong>지원 조건</strong><p>RHEL 10 kpatch는 RHEL 10.2부터 지원됩니다. 이번 실습은 <code>kernel-6.12.0-211.16.1.el10_2</code>로 고정된 Source Image와 Workshop Repository에서 제공하는 <code>kpatch-patch-6_12_0-211_16_1-2-13.el10_2</code>를 사용해 <code>[enabled]</code> live patch module을 확인합니다. 모든 CVE가 live patch 대상은 아닙니다.</p></div>
+<div class="callout info"><strong>기본 실습의 Repository 구성</strong><p><code>workshop-rhel10</code> Repository는 실습용 Source Image 안에 로컬 저장소(<code>baseurl=file:///usr/share/workshop-repo</code>)로 내장되어 있으며, Hardened Image를 거쳐 부팅된 시스템에도 그대로 포함됩니다. 따라서 Step 1~6에서는 개인 Red Hat 계정이나 RHSM 등록 없이 kpatch와 Userspace Update를 진행합니다. RHSM 등록은 Step 7 Optional 실습에서만 수행합니다.</p></div>
 
 <h3>4-1. kpatch 적용 전 사전 검증</h3>
 <p>실제 patch 적용 전에 실행 중인 kernel, kpatch 도구, transient DNF 지원 여부와 Workshop Repository를 확인합니다. 이 단계에서 RHSM 미등록 메시지가 표시되어도 기본 실습에는 영향을 주지 않습니다.</p>
@@ -415,7 +509,7 @@ sudo dnf kpatch status</code></pre>
 <div class="code-card" data-lang="text"><div class="code-head"><span>정상적으로 표시될 수 있는 메시지</span></div><pre><code>Unable to read consumer identity
 
 This system is not registered with an entitlement server.</code></pre></div>
-<p><code>dnf repolist</code>에 <code>workshop-rhel10</code>이 표시되고, <code>dnf kpatch status</code>의 <code>Available patches</code>에 <code>kpatch-patch-6_12_0-211_16_1-1-5.el10_2.x86_64</code>가 보이면 정상입니다. 개인 Red Hat 계정 등록은 Step 7 Optional 실습에서 진행합니다.</p></div>
+<p><code>dnf repolist</code>에 <code>workshop-rhel10</code>이 표시되고, <code>dnf kpatch status</code>의 <code>Available patches</code>에 <code>kpatch-patch-6_12_0-211_16_1-2-13.el10_2.x86_64</code>가 보이면 정상입니다. 개인 Red Hat 계정 등록은 Step 7 Optional 실습에서 진행합니다.</p></div>
 
 <div class="table-scroll">
 <table class="verify compact-verify"><thead><tr><th>확인 항목</th><th>정상 기준</th></tr></thead><tbody>
@@ -425,7 +519,7 @@ This system is not registered with an entitlement server.</code></pre></div>
 <tr><td>Transient DNF 지원 여부 (<code>dnf --help</code>)</td><td><code>--transient</code> 옵션 확인</td></tr>
 <tr><td>RHSM 등록 상태</td><td>미등록이어도 정상 · 기본 실습에서는 RHSM 불필요</td></tr>
 <tr><td>활성화된 저장소 (<code>dnf repolist</code>)</td><td><code>workshop-rhel10</code> / RHEL 10.2 Workshop Repository</td></tr>
-<tr><td>kpatch 상태 (<code>dnf kpatch status</code>)</td><td><code>Available patches: kpatch-patch-6_12_0-211_16_1-1-5.el10_2.x86_64</code> 확인</td></tr>
+<tr><td>kpatch 상태 (<code>dnf kpatch status</code>)</td><td><code>Available patches: kpatch-patch-6_12_0-211_16_1-2-13.el10_2.x86_64</code> 확인</td></tr>
 </tbody></table>
 </div>
 <div class="callout ok"><strong>4-1 성공 기준</strong><p>RHSM이 미등록이어도 <code>workshop-rhel10</code> Repository와 대상 <code>kpatch-patch</code>가 확인되면 준비 완료입니다. 별도 RHSM 등록 없이 바로 4-2로 진행합니다.</p></div>
@@ -459,13 +553,13 @@ uname -r</code></pre>
 <dt><code>uname -r</code></dt><dd>live patch 전후 running kernel version이 그대로인지 확인합니다.</dd>
 </dl></div></div>
 <div class="table-scroll"><table class="verify"><thead><tr><th>검증 항목</th><th>정상 기준</th><th>의미</th></tr></thead><tbody>
-<tr><td>Workshop Repository의 kpatch 패키지 (<code>dnf repoquery</code>)</td><td>kpatch-patch-6_12_0-211_16_1-1-5.el10_2 확인</td><td>실습 대상 live patch package 제공</td></tr>
+<tr><td>Workshop Repository의 kpatch 패키지 (<code>dnf repoquery</code>)</td><td>kpatch-patch-6_12_0-211_16_1-2-13.el10_2 확인</td><td>실습 대상 live patch package 제공</td></tr>
 <tr><td>kpatch Live Patch 적용 (<code>dnf --transient kpatch auto</code>)</td><td>오류 없이 완료</td><td>현재 boot 세션에서 live patch 적용</td></tr>
-<tr><td>설치된 kpatch 패키지 (<code>rpm -qa</code>)</td><td>kpatch-patch-6_12_0-211_16_1-1-5.el10_2 설치</td><td>delivery RPM 설치</td></tr>
-<tr><td>로드된 Live Patch 모듈 (<code>kpatch list</code>)</td><td>kpatch_6_12_0_211_16_1_1_5 [enabled]</td><td>실제 live patch module 활성화</td></tr>
+<tr><td>설치된 kpatch 패키지 (<code>rpm -qa</code>)</td><td>kpatch-patch-6_12_0-211_16_1-2-13.el10_2 설치</td><td>delivery RPM 설치</td></tr>
+<tr><td>로드된 Live Patch 모듈 (<code>kpatch list</code>)</td><td>kpatch_6_12_0_211_16_1_2_13 [enabled]</td><td>실제 live patch module 활성화</td></tr>
 <tr><td>실행 중인 커널 (<code>uname -r</code>)</td><td>6.12.0-211.16.1.el10_2.x86_64 유지</td><td>kernel 교체/reboot 없이 patch 적용</td></tr>
 </tbody></table></div>
-<div class="callout ok"><strong>Step 4 성공 기준</strong><p><code>kpatch_6_12_0_211_16_1_1_5 [enabled]</code>가 확인되고 <code>uname -r</code>이 <code>6.12.0-211.16.1.el10_2.x86_64</code>로 그대로이면 성공입니다. 이제 Step 5 Userspace Update로 진행합니다.</p></div>
+<div class="callout ok"><strong>Step 4 성공 기준</strong><p><code>kpatch_6_12_0_211_16_1_2_13 [enabled]</code>가 확인되고 <code>uname -r</code>이 <code>6.12.0-211.16.1.el10_2.x86_64</code>로 그대로이면 성공입니다. 이제 Step 5 Userspace Update로 진행합니다.</p></div>
 </section><section id="s5"><div class="section-kicker">STEP 5</div><h2>Userspace Update Image 직접 생성</h2><p class="lead">새 repository 대신 같은 rhel10-cve-lab repository 안에 :userspace-update tag를 추가합니다.</p>
 <h3>5-1. 변경 전 상태 기록</h3><div class="code-card" data-lang="shell"><div class="code-head"><span>Shell · userspace baseline</span><div class="code-actions"><button aria-controls="explain-22" aria-expanded="false" class="explain-toggle" type="button">명령어 설명</button><button class="copy" type="button">복사</button></div></div><pre><code>mkdir -p ~/rhel10-cve-lab-state
 
@@ -700,7 +794,7 @@ sudo bootc status --verbose
 cat /usr/share/lab-image-stage
 cat /usr/share/lab-userspace-generation
 uname -r</code></pre><div class="command-explain" id="explain-28"><div class="explain-title">필요할 때만 펼쳐보는 명령어 설명</div><dl><dt><code>bootc rollback</code></dt><dd>현재 deployment의 바로 이전 bootc deployment로 되돌립니다.</dd><dt><code>--soft-reboot=required --apply</code></dt><dd>가능한 경우 soft reboot 방식으로 rollback을 즉시 적용하고, 조건이 맞지 않으면 임의로 full reboot하지 않도록 합니다.</dd><dt><code>bootc status / marker</code></dt><dd>재접속 후 실제로 이전 이미지 단계로 돌아왔는지 상태와 marker로 확인합니다.</dd><dt><code>uname -r</code></dt><dd>rollback 이후 running kernel 상태도 함께 확인합니다.</dd></dl></div></div>
-</div></details><h3>8-2. 문제 해결</h3><div class="table-scroll"><table class="verify"><thead><tr><th>검증 항목</th><th>정상 기준</th><th>의미</th></tr></thead><tbody><tr><td>stage 1 requires a FROM instruction</td><td>Containerfile 깨짐</td><td>nl -ba / grep ^FROM 후 재작성</td></tr><tr><td>repository not found</td><td>앞 build 실패/이름 불일치</td><td>build→images→push로 단계 분리</td></tr><tr><td>Quay가 빈 것처럼 보임</td><td>repository/tag 혼동</td><td>Tags 메뉴에서 hardened/userspace-update 확인</td></tr><tr><td>manifest unknown / :latest pull 실패</td><td>Source image tag 생략 또는 존재하지 않는 tag</td><td><code>quay.io/yeslee/rhel10-bootc:10.2</code>처럼 실제 존재하는 tag를 명시하고 먼저 <code>podman pull</code>로 검증</td></tr><tr><td>unauthorized</td><td>Quay auth 누락</td><td>podman login + /etc/ostree/auth.json</td></tr><tr><td>SSH Host Key 변경 경고 (<code>REMOTE HOST IDENTIFICATION HAS CHANGED!</code>)</td><td>의도한 OS 교체 직후라면 정상</td><td>Windows / macOS / Linux에서 <code>ssh-keygen -R &lt;OpenTLC-호스트명&gt;</code> 실행 → 재접속 → 새 fingerprint 확인 후 <code>yes</code>. 재설치 없이 발생했다면 먼저 원인을 확인.</td></tr><tr><td>kpatch list가 비어 있음</td><td>이번 실습에서는 비정상</td><td><code>dnf repolist</code>에서 <code>workshop-rhel10</code> 활성 여부를 확인하고, <code>repoquery</code>로 1-5 package 제공 여부, <code>rpm -qa</code>로 설치 여부, <code>uname -r</code>로 대상 kernel 일치 여부를 확인</td></tr><tr><td>soft reboot required 실패</td><td>kernel/low-level 변경</td><td>kernel-core 동일성부터 재확인</td></tr><tr><td>변수명이나 리다이렉션 앞에 불필요한 backslash가 보임</td><td>문서 포맷용 escape가 실제 코드에 섞임</td><td>2-2의 Containerfile 전체 블록을 다시 복사하고, 바로 아래 “Containerfile 자체 검증” 결과를 확인</td></tr></tbody></table></div>
+</div></details><h3>8-2. 문제 해결</h3><div class="table-scroll"><table class="verify"><thead><tr><th>검증 항목</th><th>정상 기준</th><th>의미</th></tr></thead><tbody><tr><td>stage 1 requires a FROM instruction</td><td>Containerfile 깨짐</td><td>nl -ba / grep ^FROM 후 재작성</td></tr><tr><td>repository not found</td><td>앞 build 실패/이름 불일치</td><td>build→images→push로 단계 분리</td></tr><tr><td>Quay가 빈 것처럼 보임</td><td>repository/tag 혼동</td><td>Tags 메뉴에서 hardened/userspace-update 확인</td></tr><tr><td>manifest unknown / :latest pull 실패</td><td>Source image tag 생략 또는 존재하지 않는 tag</td><td><code>quay.io/yeslee/rhel10-bootc:10.2</code>처럼 실제 존재하는 tag를 명시하고 먼저 <code>podman pull</code>로 검증</td></tr><tr><td>unauthorized</td><td>Quay auth 누락</td><td>podman login + /etc/ostree/auth.json</td></tr><tr><td>SSH Host Key 변경 경고 (<code>REMOTE HOST IDENTIFICATION HAS CHANGED!</code>)</td><td>의도한 OS 교체 직후라면 정상</td><td>Windows / macOS / Linux에서 <code>ssh-keygen -R &lt;OpenTLC-호스트명&gt;</code> 실행 → 재접속 → 새 fingerprint 확인 후 <code>yes</code>. 재설치 없이 발생했다면 먼저 원인을 확인.</td></tr><tr><td>build 중 <code>workshop-rhel10</code> <code>Could not resolve host</code></td><td>예전 Source Image(원격 repo 방식)가 호스트에 남아 있음</td><td><code>sudo podman pull quay.io/yeslee/rhel10-bootc:10.2</code>로 최신 Source Image를 받은 뒤 2-3 Build를 다시 실행</td></tr><tr><td>kpatch list가 비어 있음</td><td>이번 실습에서는 비정상</td><td><code>dnf repolist</code>에서 <code>workshop-rhel10</code> 활성 여부를 확인하고, <code>repoquery</code>로 2-13 package 제공 여부, <code>rpm -qa</code>로 설치 여부, <code>uname -r</code>로 대상 kernel 일치 여부를 확인</td></tr><tr><td>soft reboot required 실패</td><td>kernel/low-level 변경</td><td>kernel-core 동일성부터 재확인</td></tr><tr><td>변수명이나 리다이렉션 앞에 불필요한 backslash가 보임</td><td>문서 포맷용 escape가 실제 코드에 섞임</td><td>2-1의 Containerfile 전체 블록을 다시 복사하고, 바로 아래 “Containerfile 자체 검증” 결과를 확인</td></tr></tbody></table></div>
 </section><section id="check"><div class="section-kicker">FINAL</div><h2>최종 검증 체크리스트</h2><div class="progress"><span></span></div><div class="mini progress-text">0 / 13</div><div class="checklist"><label><input type="checkbox"/>출발 host가 RHEL 10.0 Package Mode임을 확인했다.</label><label><input type="checkbox"/>quay.io/yeslee/rhel10-bootc:10.2가 실제 RHEL 10.2인지 확인했다.</label><label><input type="checkbox"/>참가자가 :hardened Containerfile을 직접 작성/build/push했다.</label><label><input type="checkbox"/>lab-user, SELinux, sysctl, kpatch 도구를 image 내부에서 검증했다.</label><label><input type="checkbox"/>RHEL 10.2 Image Mode 전환 후 runtime hardening을 검증했다.</label><label><input type="checkbox"/>OS 전환 후 로컬 PC의 이전 SSH host key를 정리하고 새 key로 lab-user 재접속을 확인했다.</label><label><input type="checkbox"/>kpatch: workshop-rhel10 Repository에서 대상 patch를 확인하고 [enabled] Live Patch를 적용했다.</label><label><input type="checkbox"/>같은 repository 아래 hardened/userspace-update 두 tag를 확인했다.</label><label><input type="checkbox"/>두 tag의 kernel-core 동일성을 확인했다.</label><label><input type="checkbox"/>OpenSSL/glibc + tree + generation으로 userspace 변화를 확인했다.</label><label><input type="checkbox"/>SoftRebootsCount 증가 + uname -r 동일을 확인했다.</label><label><input type="checkbox"/>Containerfile이 한 블록으로 생성되고 Markdown escape artifact가 없음을 확인했다.</label><label><input type="checkbox"/>선택: dnf updateinfo 또는 Red Hat Lightspeed로 CVE 검증 방법을 확인했다.</label></div></section><section id="refs"><div class="section-kicker">REF</div><h2>참고 문서</h2><ul class="ref-list"><li><b>RHEL Image Mode overview / RHEL bootc</b><br/><a href="https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/10/html/using_image_mode_for_rhel_to_build_deploy_and_manage_operating_systems/introducing-image-mode-for-rhel" rel="noreferrer" target="_blank">https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/10/html/using_image_mode_for_rhel_to_build_deploy_and_manage_operating_systems/introducing-image-mode-for-rhel</a></li><li><b>system-reinstall-bootc deployment</b><br/><a href="https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/10/html/using_image_mode_for_rhel_to_build_deploy_and_manage_operating_systems/deploying-the-rhel-bootc-images" rel="noreferrer" target="_blank">https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/10/html/using_image_mode_for_rhel_to_build_deploy_and_manage_operating_systems/deploying-the-rhel-bootc-images</a></li><li><b>Private registry pull secrets</b><br/><a href="https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/10/html/using_image_mode_for_rhel_to_build_deploy_and_manage_operating_systems/managing-users-groups-ssh-keys-and-secrets-in-image-mode-for-rhel" rel="noreferrer" target="_blank">https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/10/html/using_image_mode_for_rhel_to_build_deploy_and_manage_operating_systems/managing-users-groups-ssh-keys-and-secrets-in-image-mode-for-rhel</a></li><li><b>DNF / transient changes in Image Mode</b><br/><a href="https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/10/html/using_image_mode_for_rhel_to_build_deploy_and_manage_operating_systems/system-configuration" rel="noreferrer" target="_blank">https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/10/html/using_image_mode_for_rhel_to_build_deploy_and_manage_operating_systems/system-configuration</a></li><li><b>systemd soft reboot for bootc</b><br/><a href="https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/10/html/using_image_mode_for_rhel_to_build_deploy_and_manage_operating_systems/performing-soft-reboots-to-rhel-bootc-images" rel="noreferrer" target="_blank">https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/10/html/using_image_mode_for_rhel_to_build_deploy_and_manage_operating_systems/performing-soft-reboots-to-rhel-bootc-images</a></li><li><b>RHEL 10 kernel live patching / kpatch</b><br/><a href="https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/10/html/managing_monitoring_and_updating_the_kernel/applying-patches-with-kernel-live-patching" rel="noreferrer" target="_blank">https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/10/html/managing_monitoring_and_updating_the_kernel/applying-patches-with-kernel-live-patching</a></li><li><b>RHEL 10 Release Notes — CVE OVAL v2 feed no longer provided</b><br/><a href="https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/10/html/10.0_release_notes/removed-features" rel="noreferrer" target="_blank">https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/10/html/10.0_release_notes/removed-features</a></li><li><b>RHEL 10 Security Hardening — OpenSCAP configuration compliance</b><br/><a href="https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/10/html/security_hardening/scanning-the-system-for-configuration-compliance" rel="noreferrer" target="_blank">https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/10/html/security_hardening/scanning-the-system-for-configuration-compliance</a></li><li><b>RHEL 10 Security Updates — dnf updateinfo</b><br/><a href="https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/10/html/risk_reduction_and_recovery_operations/managing-and-monitoring-security-updates" rel="noreferrer" target="_blank">https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/10/html/risk_reduction_and_recovery_operations/managing-and-monitoring-security-updates</a></li><li><b>Red Hat Lightspeed — RHEL 10 system registration</b><br/><a href="https://docs.redhat.com/en/documentation/red_hat_lightspeed/1-latest/html/registering_rhel_systems_and_configuring_client_tools_with_red_hat_lightspeed/connecting-and-registering-systems" rel="noreferrer" target="_blank">https://docs.redhat.com/en/documentation/red_hat_lightspeed/1-latest/html/registering_rhel_systems_and_configuring_client_tools_with_red_hat_lightspeed/connecting-and-registering-systems</a></li><li><b>Red Hat Lightspeed Vulnerability Service</b><br/><a href="https://docs.redhat.com/en/documentation/red_hat_lightspeed/1-latest/html/assessing_and_monitoring_security_vulnerabilities_on_rhel_systems/vuln-overview_vulnerability-assess" rel="noreferrer" target="_blank">https://docs.redhat.com/en/documentation/red_hat_lightspeed/1-latest/html/assessing_and_monitoring_security_vulnerabilities_on_rhel_systems/vuln-overview_vulnerability-assess</a></li></ul></section><div class="toolbar"><button onclick="window.print()">인쇄</button><button id="resetChecks">체크 초기화</button></div>
 </main></div><script>
 function escapeHtml(s){return s.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));}
