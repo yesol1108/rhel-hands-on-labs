@@ -19,13 +19,21 @@ HARDENED_PKGS=(openssh-server sudo podman rhc insights-client kpatch kpatch-dnf)
 # Step 4 kpatch 실습 대상 (base image의 고정 kernel 6.12.0-211.16.1.el10_2 용)
 KPATCH_PKG="kpatch-patch-6_12_0-211_16_1"
 # 가이드 Step 4에 적힌 기대 버전
-KPATCH_PIN="${KPATCH_PKG}-1-5.el10_2"
+KPATCH_PIN="${KPATCH_PKG}-2-13.el10_2"
 
 # Step 5 Userspace Update에서 설치하는 marker 패키지
 USERSPACE_INSTALL_PKGS=(tree)
 
 # 기존 원격 workshop 저장소는 사용하지 않고 Red Hat CDN만 사용
-DNF=(dnf -y --disablerepo=workshop-rhel10 --setopt=install_weak_deps=False)
+DNF_CACHE="/tmp/workshop-dnf-cache"
+DNF=(dnf -y --disablerepo=workshop-rhel10 --setopt=install_weak_deps=False
+     --setopt=keepcache=True --setopt=cachedir="${DNF_CACHE}")
+
+# dnf 버전에 따라 --downloadonly 의 --destdir 가 무시되고 캐시에만 저장되는 경우가 있어
+# 전용 캐시 디렉터리에 받은 뒤, 캐시의 RPM을 저장소 폴더로 모읍니다.
+collect_from_cache() {
+    find "${DNF_CACHE}" -name '*.rpm' -exec cp -n {} "${OUT}/" \; 2>/dev/null || true
+}
 
 mkdir -p "${OUT}"
 
@@ -64,6 +72,7 @@ if [ -z "$(find "${OUT}" -maxdepth 1 -name "${KPATCH_PKG}-*.rpm")" ]; then
     done
 fi
 
+collect_from_cache
 if [ -z "$(find "${OUT}" -maxdepth 1 -name "${KPATCH_PKG}-*.rpm")" ]; then
     echo "################################################" >&2
     echo "# ERROR: ${KPATCH_PKG} RPM을 찾지 못했습니다." >&2
@@ -90,6 +99,8 @@ echo "대상: ${UPDATE_PKGS[*]}"
 if ! "${DNF[@]}" upgrade --downloadonly --destdir "${OUT}" "${UPDATE_PKGS[@]}"; then
     echo "WARN: glibc/openssl 새 버전이 없습니다. Step 5에서는 tree marker로만 변경이 확인됩니다."
 fi
+
+collect_from_cache
 
 echo "=== 4. kernel RPM 혼입 검사 ==="
 KERNEL_RPMS="$(find "${OUT}" -maxdepth 1 -name 'kernel*.rpm' -printf '%f\n')"
