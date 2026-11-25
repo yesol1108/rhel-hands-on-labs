@@ -14,6 +14,8 @@ ARG BASE_IMAGE
 # ---------- 1단계: 필요한 RPM 수집 ----------
 FROM ${BASE_IMAGE} AS collector
 COPY collect-rpms.sh /tmp/collect-rpms.sh
+# 직접 준비한 RPM(예: kpatch-patch)이 있으면 extra-rpms/ 에 넣어두면 함께 포함됩니다.
+COPY extra-rpms/ /tmp/extra-rpms/
 RUN bash /tmp/collect-rpms.sh
 
 # ---------- 2단계: 원본 이미지 + 내장 저장소 ----------

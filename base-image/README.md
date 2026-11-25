@@ -31,6 +31,15 @@ PUSH=yes ./build-base-image.sh   # 바로 push
 - 처음 실행하면 현재 `:10.2`를 `:10.2-remote-repo-backup`으로 백업합니다.
 - 이후에는 항상 백업(원본)을 기준으로 빌드하므로 여러 번 실행해도 안전합니다.
 
+## kpatch-patch를 찾지 못할 때
+
+빌드 호스트의 구독 저장소에 `kpatch-patch-6_12_0-211_16_1`이 없으면, 스크립트가
+base image의 minor 버전(`--releasever=10.2`)으로 한 번 더 찾습니다.
+그래도 없으면 진단 정보를 출력하고 실패합니다.
+
+RPM 파일(`kpatch-patch-6_12_0-211_16_1-*.el10_2.x86_64.rpm`)을 따로 구할 수 있다면
+`base-image/extra-rpms/`에 넣고 다시 빌드하면 그 파일이 저장소에 포함됩니다.
+
 ## 빌드 후 확인할 것
 
 - 출력의 `kpatch-patch:` 버전이 가이드의 `kpatch-patch-6_12_0-211_16_1-1-5.el10_2`와 같은지

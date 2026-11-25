@@ -11,6 +11,7 @@
 set -euo pipefail
 
 OUT="${OUT:-/workshop-repo}"
+EXTRA_DIR="${EXTRA_DIR:-/tmp/extra-rpms}"
 
 # Step 2 Hardened Containerfile에서 설치하는 패키지
 HARDENED_PKGS=(openssh-server sudo podman rhc insights-client kpatch kpatch-dnf)
@@ -31,7 +32,39 @@ echo "=== 1. Step 2/5 설치 패키지 + 의존성 (미설치분만) ==="
     "${HARDENED_PKGS[@]}" "${USERSPACE_INSTALL_PKGS[@]}"
 
 echo "=== 2. Step 4 kpatch-patch ==="
-"${DNF[@]}" install --downloadonly --destdir "${OUT}" "${KPATCH_PKG}"
+# 1) base-image/extra-rpms/ 에 직접 넣어둔 RPM이 있으면 그대로 사용
+if compgen -G "${EXTRA_DIR}/*.rpm" >/dev/null; then
+    echo "extra-rpms 사용: $(cd "${EXTRA_DIR}" && ls -- *.rpm)"
+    cp "${EXTRA_DIR}"/*.rpm "${OUT}/"
+fi
+
+if [ -z "$(find "${OUT}" -maxdepth 1 -name "${KPATCH_PKG}-*.rpm")" ]; then
+    # 2) 기본 저장소에서 찾기
+    if ! "${DNF[@]}" install --downloadonly --destdir "${OUT}" "${KPATCH_PKG}"; then
+        # 3) base image의 minor 버전(예: 10.2) 기준 저장소에서 다시 찾기
+        BASE_RELEASEVER="$(. /etc/os-release && echo "${VERSION_ID}")"
+        echo "기본 저장소에 없어 --releasever=${BASE_RELEASEVER} 로 다시 찾습니다."
+        "${DNF[@]}" --releasever="${BASE_RELEASEVER}" install --downloadonly --destdir "${OUT}" "${KPATCH_PKG}" || true
+    fi
+fi
+
+if [ -z "$(find "${OUT}" -maxdepth 1 -name "${KPATCH_PKG}-*.rpm")" ]; then
+    echo "################################################" >&2
+    echo "# ERROR: ${KPATCH_PKG} RPM을 찾지 못했습니다." >&2
+    echo "#  아래 진단 정보 전체를 복사해서 전달해 주세요." >&2
+    echo "#  RPM 파일을 가지고 있다면 base-image/extra-rpms/ 에 넣고 다시 빌드하세요." >&2
+    echo "################################################" >&2
+    echo "--- [진단] base image ---" >&2
+    grep -E '^(NAME|VERSION_ID)=' /etc/os-release >&2
+    rpm -q kernel-core >&2
+    echo "--- [진단] 사용 가능한 저장소 ---" >&2
+    dnf -q --disablerepo=workshop-rhel10 repolist -v 2>/dev/null | grep -E '^Repo-(id|baseurl)' >&2 || true
+    echo "--- [진단] 저장소의 kpatch-patch (최근 15개) ---" >&2
+    dnf -q --disablerepo=workshop-rhel10 repoquery 'kpatch-patch*' 2>/dev/null | sort | tail -15 >&2 || true
+    echo "--- [진단] 저장소의 kernel-core 6.12.0-211* ---" >&2
+    dnf -q --disablerepo=workshop-rhel10 repoquery --showduplicates 'kernel-core-6.12.0-211*' 2>/dev/null | sort | tail -10 >&2 || true
+    exit 1
+fi
 
 echo "=== 3. Step 5 업데이트 대상 (설치된 glibc*/openssl* 의 새 버전) ==="
 mapfile -t UPDATE_PKGS < <(rpm -qa --qf '%{name}\n' 'glibc*' 'openssl*' | sort -u)
@@ -49,7 +82,7 @@ if [ -n "${KERNEL_RPMS}" ]; then
 fi
 
 echo "=== 5. kpatch-patch 포함 검사 ==="
-if ! find "${OUT}" -maxdepth 1 -name "${KPATCH_PKG}-*.rpm" | grep -q .; then
+if [ -z "$(find "${OUT}" -maxdepth 1 -name "${KPATCH_PKG}-*.rpm")" ]; then
     echo "ERROR: ${KPATCH_PKG} RPM을 받지 못했습니다." >&2
     exit 1
 fi
