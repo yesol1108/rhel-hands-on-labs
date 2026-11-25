@@ -33,9 +33,18 @@ PUSH=yes ./build-base-image.sh   # 바로 push
 
 ## kpatch-patch를 찾지 못할 때
 
-빌드 호스트의 구독 저장소에 `kpatch-patch-6_12_0-211_16_1`이 없으면, 스크립트가
-base image의 minor 버전(`--releasever=10.2`)으로 한 번 더 찾습니다.
-그래도 없으면 진단 정보를 출력하고 실패합니다.
+`kpatch-patch-6_12_0-211_16_1`은 일반 `rhel-10-for-x86_64-baseos-rpms`가 아니라
+**RHEL 10.2 전용 저장소(EUS / 4 years of updates / Extended Life Cycle)**로 배포됩니다.
+스크립트는 다음 순서로 찾습니다.
+
+1. `extra-rpms/`에 넣어둔 RPM
+2. 기본 저장소에서 가이드 기대 버전 `1-5.el10_2`
+3. `--releasever=10.2` + `*baseos-eus/e4s/els/aus-rpms` 저장소에서 `1-5.el10_2`
+4. 같은 10.2 전용 저장소에서 최신 버전 (이 경우 가이드 Step 4 기대값 수정 필요)
+
+빌드 호스트의 구독에 10.2 전용 저장소가 없으면 진단 정보에
+`(없음 - 이 구독에는 10.2 전용 저장소가 없습니다)`가 표시됩니다.
+이때는 해당 저장소가 포함된 구독(사내 계정 등)으로 등록한 호스트에서 빌드하세요.
 
 RPM 파일(`kpatch-patch-6_12_0-211_16_1-*.el10_2.x86_64.rpm`)을 따로 구할 수 있다면
 `base-image/extra-rpms/`에 넣고 다시 빌드하면 그 파일이 저장소에 포함됩니다.

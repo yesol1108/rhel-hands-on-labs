@@ -18,6 +18,8 @@ HARDENED_PKGS=(openssh-server sudo podman rhc insights-client kpatch kpatch-dnf)
 
 # Step 4 kpatch 실습 대상 (base image의 고정 kernel 6.12.0-211.16.1.el10_2 용)
 KPATCH_PKG="kpatch-patch-6_12_0-211_16_1"
+# 가이드 Step 4에 적힌 기대 버전
+KPATCH_PIN="${KPATCH_PKG}-1-5.el10_2"
 
 # Step 5 Userspace Update에서 설치하는 marker 패키지
 USERSPACE_INSTALL_PKGS=(tree)
@@ -39,13 +41,27 @@ if compgen -G "${EXTRA_DIR}/*.rpm" >/dev/null; then
 fi
 
 if [ -z "$(find "${OUT}" -maxdepth 1 -name "${KPATCH_PKG}-*.rpm")" ]; then
-    # 2) 기본 저장소에서 찾기
-    if ! "${DNF[@]}" install --downloadonly --destdir "${OUT}" "${KPATCH_PKG}"; then
-        # 3) base image의 minor 버전(예: 10.2) 기준 저장소에서 다시 찾기
-        BASE_RELEASEVER="$(. /etc/os-release && echo "${VERSION_ID}")"
-        echo "기본 저장소에 없어 --releasever=${BASE_RELEASEVER} 로 다시 찾습니다."
-        "${DNF[@]}" --releasever="${BASE_RELEASEVER}" install --downloadonly --destdir "${OUT}" "${KPATCH_PKG}" || true
-    fi
+    # 2) kpatch-patch-6_12_0-211_16_1 은 10.2 전용 저장소(EUS / 4 years of updates / ELS)로
+    #    배포되므로, base image의 minor 버전(10.2)으로 해당 저장소를 켜고 찾습니다.
+    #    가이드 기대값과 맞추기 위해 ${KPATCH_PIN} 을 먼저 시도하고, 없으면 최신 버전을 받습니다.
+    BASE_RELEASEVER="$(. /etc/os-release && echo "${VERSION_ID}")"
+    MINOR_REPOS=(--releasever="${BASE_RELEASEVER}"
+                 --enablerepo='*baseos-eus-rpms' --enablerepo='*baseos-e4s-rpms'
+                 --enablerepo='*baseos-els-rpms' --enablerepo='*baseos-aus-rpms')
+    for ATTEMPT in \
+        "기본 저장소 / ${KPATCH_PIN}|${KPATCH_PIN}|" \
+        "10.2 전용 저장소 / ${KPATCH_PIN}|${KPATCH_PIN}|minor" \
+        "10.2 전용 저장소 / 최신 버전|${KPATCH_PKG}|minor" \
+        "기본 저장소 / 최신 버전|${KPATCH_PKG}|"; do
+        IFS='|' read -r LABEL PKG MODE <<< "${ATTEMPT}"
+        echo "--- kpatch-patch 시도: ${LABEL}"
+        if [ "${MODE}" = "minor" ]; then
+            "${DNF[@]}" "${MINOR_REPOS[@]}" --setopt=skip_if_unavailable=True \
+                install --downloadonly --destdir "${OUT}" "${PKG}" && break || true
+        else
+            "${DNF[@]}" install --downloadonly --destdir "${OUT}" "${PKG}" && break || true
+        fi
+    done
 fi
 
 if [ -z "$(find "${OUT}" -maxdepth 1 -name "${KPATCH_PKG}-*.rpm")" ]; then
@@ -59,6 +75,8 @@ if [ -z "$(find "${OUT}" -maxdepth 1 -name "${KPATCH_PKG}-*.rpm")" ]; then
     rpm -q kernel-core >&2
     echo "--- [진단] 사용 가능한 저장소 ---" >&2
     dnf -q --disablerepo=workshop-rhel10 repolist -v 2>/dev/null | grep -E '^Repo-(id|baseurl)' >&2 || true
+    echo "--- [진단] 구독에 포함된 10.2 전용 BaseOS 저장소 ---" >&2
+    dnf -q repolist --all 2>/dev/null | grep -Ei 'baseos-(eus|e4s|els|aus)' >&2 || echo "(없음 - 이 구독에는 10.2 전용 저장소가 없습니다)" >&2
     echo "--- [진단] 저장소의 kpatch-patch (최근 15개) ---" >&2
     dnf -q --disablerepo=workshop-rhel10 repoquery 'kpatch-patch*' 2>/dev/null | sort | tail -15 >&2 || true
     echo "--- [진단] 저장소의 kernel-core 6.12.0-211* ---" >&2
